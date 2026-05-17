@@ -30,7 +30,7 @@ export function LogTerminal() {
   return (
     <div className="h-[640px] flex flex-col bg-white rounded-2xl shadow-[0_1px_2px_rgba(0,0,0,.04)] border border-[#E5E7EB] overflow-hidden">
       {/* Header toolbar */}
-      <div className="h-14 px-6 flex items-center justify-between border-b border-[#E5E7EB]">
+      <div className="h-14 px-5 flex items-center justify-between border-b border-[#E5E7EB]">
         <h3 className="text-sm font-medium text-[#1F2937]">实时日志</h3>
 
         <div className="flex items-center gap-3">
@@ -58,13 +58,13 @@ export function LogTerminal() {
         </div>
       </div>
 
-      {/* Log entries */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-        <div className="font-mono text-xs space-y-2">
+      {/* Log entries - smaller font, tighter spacing */}
+      <ScrollArea className="flex-1" ref={scrollRef}>
+        <div className="font-mono text-xs p-4 space-y-1">
           {filteredLogs.map((log, index) => (
-            <div key={index} className="flex items-center gap-3 h-8">
+            <div key={index} className="flex items-center gap-3 h-7">
               <span className="text-[#9CA3AF] w-16 flex-shrink-0">{log.time}</span>
-              <span className={`px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${levelColors[log.level]}`}>
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0 ${levelColors[log.level]}`}>
                 {log.level}
               </span>
               <span className="text-[#374151] truncate">{log.msg}</span>
@@ -74,7 +74,7 @@ export function LogTerminal() {
       </ScrollArea>
 
       {/* Bottom: auto-scroll toggle */}
-      <div className="h-12 px-6 flex items-center border-t border-[#E5E7EB] bg-[#F9FAFB]">
+      <div className="h-12 px-5 flex items-center border-t border-[#E5E7EB] bg-[#F9FAFB]">
         <div className="flex items-center gap-2">
           <Switch id="auto-scroll" checked={autoScroll} onCheckedChange={setAutoScroll} />
           <Label htmlFor="auto-scroll" className="text-xs text-[#6B7280]">

@@ -3,6 +3,14 @@
 @tailwind utilities;
 
 @layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    overflow-x: hidden;
+  }
+
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
@@ -29,6 +37,6 @@
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-900;
+    @apply bg-[#F5F7FB] text-[#1F2937];
   }
 }

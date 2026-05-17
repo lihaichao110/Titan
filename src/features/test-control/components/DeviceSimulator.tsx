@@ -28,9 +28,9 @@ export function DeviceSimulator() {
         </div>
       </div>
 
-      {/* Device Frame */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="relative w-[240px] h-[480px] bg-[#1F2937] rounded-[36px] p-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
+      {/* Device Frame - 缩小5% */}
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="relative w-[228px] h-[456px] bg-[#1F2937] rounded-[36px] p-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
           <div className="w-full h-full bg-white rounded-[30px] overflow-hidden">
             {/* Notch */}
             <div className="h-7 bg-[#1F2937] flex items-center justify-center">
@@ -38,11 +38,11 @@ export function DeviceSimulator() {
             </div>
 
             {/* App Content */}
-            <div className="p-5 flex flex-col h-full">
+            <div className="p-4 flex flex-col h-full">
               <div className="flex-1 flex flex-col">
-                <h2 className="text-lg font-bold text-[#1F2937] text-center mt-3">欢迎回来</h2>
+                <h2 className="text-base font-bold text-[#1F2937] text-center mt-3">欢迎回来</h2>
 
-                <div className="mt-6 space-y-3">
+                <div className="mt-5 space-y-3">
                   <div className="bg-[#F9FAFB] rounded-xl p-3">
                     <label className="text-xs text-[#9CA3AF] mb-1 block">手机号码</label>
                     <div className="text-sm text-[#D1D5DB]">请输入手机号码</div>
@@ -54,16 +54,16 @@ export function DeviceSimulator() {
                   </div>
                 </div>
 
-                <Button className="w-full mt-5 bg-[#2563FF] hover:bg-[#1D4ED8] text-white text-sm h-10">
+                <Button className="w-full mt-4 bg-[#2563FF] hover:bg-[#1D4ED8] text-white text-sm h-9">
                   登录
                 </Button>
 
                 {/* Third-party login */}
-                <div className="mt-5 flex items-center justify-center gap-3">
+                <div className="mt-4 flex items-center justify-center gap-3">
                   {['微信', 'QQ', 'Apple'].map((provider) => (
                     <div
                       key={provider}
-                      className="w-9 h-9 rounded-full bg-[#F3F4F6] flex items-center justify-center"
+                      className="w-8 h-8 rounded-full bg-[#F3F4F6] flex items-center justify-center"
                     >
                       <span className="text-xs text-[#6B7280]">{provider[0]}</span>
                     </div>
@@ -73,7 +73,7 @@ export function DeviceSimulator() {
             </div>
 
             {/* Home indicator */}
-            <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-28 h-0.5 bg-[#D1D5DB] rounded-full" />
+            <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-24 h-0.5 bg-[#D1D5DB] rounded-full" />
           </div>
         </div>
       </div>

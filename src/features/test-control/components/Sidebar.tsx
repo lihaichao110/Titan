@@ -36,7 +36,7 @@ export function Sidebar() {
   const { activeMenuId, setActiveMenu } = useExecutionStore();
 
   return (
-    <div className="h-full bg-white flex flex-col border-r border-[#E5E7EB]">
+    <div className="fixed left-0 top-0 bottom-0 w-[220px] bg-white flex flex-col border-r border-[#E5E7EB] z-50 overflow-hidden">
       {/* Logo */}
       <div className="h-[84px] flex items-center pl-6 border-b border-[#E5E7EB]">
         <div className="flex items-center gap-3">

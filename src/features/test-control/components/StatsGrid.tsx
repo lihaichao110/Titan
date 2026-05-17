@@ -6,7 +6,7 @@ export function StatsGrid() {
   const { stats } = context;
 
   return (
-    <div className="grid grid-cols-4 gap-4 p-6 pt-0">
+    <div className="grid grid-cols-4 gap-5 p-6 pt-0">
       {/* Card 1: 执行进度 */}
       <div className="h-[140px] bg-white rounded-2xl shadow-[0_1px_2px_rgba(0,0,0,.04)] border border-[#E5E7EB] p-5">
         <div className="text-xs text-[#6B7280] mb-3">执行进度</div>

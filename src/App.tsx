@@ -10,8 +10,8 @@ function App() {
   return (
     <MainLayout sidebar={<Sidebar />}>
       <HeaderToolbar />
-      <div className="flex-1 p-6 min-h-0">
-        <div className="grid grid-cols-[32%_36%_32%] gap-6 h-full">
+      <div className="flex-1 p-6 min-h-0 overflow-x-hidden">
+        <div className="grid grid-cols-[34%_33%_33%] gap-5 h-full">
           <DeviceSimulator />
           <StepListView />
           <LogTerminal />
