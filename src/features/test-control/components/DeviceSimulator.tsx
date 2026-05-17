@@ -1,5 +1,4 @@
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { ZoomIn, ZoomOut, RotateCcw, Camera, Smartphone, Expand, Minimize, Move } from 'lucide-react';
 import { useExecutionStore } from '../store/executionStore';
 
@@ -79,24 +78,23 @@ export function DeviceSimulator() {
       </div>
 
       {/* Bottom toolbar */}
-      <div className="h-14 px-6 flex items-center border-t border-[#E5E7EB]">
-        <Separator className="mb-2" />
-        <div className="flex items-center justify-center gap-3 w-full">
-          <Button variant="ghost" size="icon" className="h-8 w-8">
+      <div className="h-14 px-4 flex items-center border-t border-[#E5E7EB]">
+        <div className="flex items-center justify-center gap-2 w-full min-w-0 overflow-hidden">
+          <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
             <ZoomOut className="w-4 h-4 text-[#6B7280]" />
           </Button>
-          <span className="text-xs text-[#6B7280] w-12 text-center font-medium">100%</span>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
+          <span className="text-xs text-[#6B7280] w-12 text-center font-medium flex-shrink-0">100%</span>
+          <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
             <ZoomIn className="w-4 h-4 text-[#6B7280]" />
           </Button>
-          <div className="w-px h-4 bg-[#E5E7EB] mx-1" />
-          <Button variant="ghost" size="icon" className="h-8 w-8">
+          <div className="w-px h-4 bg-[#E5E7EB] mx-1 flex-shrink-0" />
+          <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
             <Camera className="w-4 h-4 text-[#6B7280]" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
             <RotateCcw className="w-4 h-4 text-[#6B7280]" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
             <Move className="w-4 h-4 text-[#6B7280]" />
           </Button>
         </div>

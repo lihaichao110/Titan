@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useExecutionStore } from '../store/executionStore';
+import { Square, Pause, RotateCw } from 'lucide-react';
 
 export function HeaderToolbar() {
   const { context } = useExecutionStore();
@@ -20,7 +21,7 @@ export function HeaderToolbar() {
             <span className={`w-2 h-2 rounded-full ${status === 'running' ? 'bg-[#2563FF]' : status === 'paused' ? 'bg-yellow-500' : 'bg-red-500'} animate-pulse`} />
             <Badge
               variant={status === 'running' ? 'default' : 'secondary'}
-              className={status === 'running' ? 'bg-[#2563FF]' : ''}
+              className={status === 'running' ? 'bg-[#2563FF] text-white' : ''}
             >
               {status === 'running' ? '运行中' : status === 'paused' ? '已暂停' : '已停止'}
             </Badge>
@@ -43,6 +44,7 @@ export function HeaderToolbar() {
           size="sm"
           className="border-[#EF4444] text-[#EF4444] hover:bg-red-50 hover:text-[#EF4444] hover:border-[#EF4444]"
         >
+          <Square className="w-4 h-4 mr-1.5" />
           停止
         </Button>
         <Button
@@ -50,6 +52,7 @@ export function HeaderToolbar() {
           size="sm"
           className="border-[#E5E7EB] text-[#374151] hover:bg-gray-50"
         >
+          <Pause className="w-4 h-4 mr-1.5" />
           暂停
         </Button>
         <Button
@@ -57,6 +60,7 @@ export function HeaderToolbar() {
           size="sm"
           className="border-[#E5E7EB] text-[#374151] hover:bg-gray-50"
         >
+          <RotateCw className="w-4 h-4 mr-1.5" />
           重新执行
         </Button>
       </div>

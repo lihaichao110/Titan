@@ -1,25 +1,39 @@
-import { useEffect, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Label } from '@/components/ui/label';
-import { Trash2 } from 'lucide-react';
-import { useExecutionStore } from '../store/executionStore';
-import type { LogLevel } from '../types';
+import { useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
+import { Trash2 } from "lucide-react";
+import { useExecutionStore } from "../store/executionStore";
+import type { LogLevel } from "../types";
 
 const levelColors: Record<LogLevel, string> = {
-  INFO: 'bg-blue-100 text-[#2563FF]',
-  SUCCESS: 'bg-green-100 text-[#16A34A]',
-  ERROR: 'bg-red-100 text-[#EF4444]',
+  INFO: "bg-blue-100 text-[#2563FF]",
+  SUCCESS: "bg-green-100 text-[#16A34A]",
+  ERROR: "bg-red-100 text-[#EF4444]",
 };
 
 export function LogTerminal() {
-  const { context, logFilter, autoScroll, setLogFilter, setAutoScroll, clearLogs } = useExecutionStore();
+  const {
+    context,
+    logFilter,
+    autoScroll,
+    setLogFilter,
+    setAutoScroll,
+    clearLogs,
+  } = useExecutionStore();
   const { logs } = context;
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const filteredLogs = logFilter === 'ALL' ? logs : logs.filter((l) => l.level === logFilter);
+  const filteredLogs =
+    logFilter === "ALL" ? logs : logs.filter((l) => l.level === logFilter);
 
   useEffect(() => {
     if (autoScroll && scrollRef.current) {
@@ -34,7 +48,10 @@ export function LogTerminal() {
         <h3 className="text-sm font-medium text-[#1F2937]">实时日志</h3>
 
         <div className="flex items-center gap-3">
-          <Select value={logFilter} onValueChange={(v) => setLogFilter(v as LogLevel | 'ALL')}>
+          <Select
+            value={logFilter}
+            onValueChange={(v) => setLogFilter(v as LogLevel | "ALL")}
+          >
             <SelectTrigger className="w-24 h-8 text-xs bg-[#F9FAFB]">
               <SelectValue />
             </SelectTrigger>
@@ -60,14 +77,18 @@ export function LogTerminal() {
 
       {/* Log entries - smaller font, tighter spacing */}
       <ScrollArea className="flex-1" ref={scrollRef}>
-        <div className="font-mono text-xs p-4 space-y-1">
+        <div className="font-mono text-xs p-4 space-y-2">
           {filteredLogs.map((log, index) => (
-            <div key={index} className="flex items-center gap-3 h-7">
-              <span className="text-[#9CA3AF] w-16 flex-shrink-0">{log.time}</span>
-              <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0 ${levelColors[log.level]}`}>
+            <div key={index} className="flex items-start gap-3">
+              <span className="text-[#9CA3AF] w-16 flex-shrink-0">
+                {log.time}
+              </span>
+              <span
+                className={`px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0 ${levelColors[log.level]}`}
+              >
                 {log.level}
               </span>
-              <span className="text-[#374151] truncate">{log.msg}</span>
+              <span className="text-[#374151] break-all">{log.msg}</span>
             </div>
           ))}
         </div>
@@ -76,7 +97,11 @@ export function LogTerminal() {
       {/* Bottom: auto-scroll toggle */}
       <div className="h-12 px-5 flex items-center border-t border-[#E5E7EB] bg-[#F9FAFB]">
         <div className="flex items-center gap-2">
-          <Switch id="auto-scroll" checked={autoScroll} onCheckedChange={setAutoScroll} />
+          <Switch
+            id="auto-scroll"
+            checked={autoScroll}
+            onCheckedChange={setAutoScroll}
+          />
           <Label htmlFor="auto-scroll" className="text-xs text-[#6B7280]">
             自动滚动
           </Label>
