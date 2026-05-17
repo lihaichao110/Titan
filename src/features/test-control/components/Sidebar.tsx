@@ -1,3 +1,4 @@
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   PlaySquare,
   CheckSquare,
@@ -7,8 +8,8 @@ import {
   Link,
   Folder,
   Settings,
-} from 'lucide-react';
-import { useExecutionStore } from '../store/executionStore';
+} from "lucide-react";
+import { useExecutionStore } from "../store/executionStore";
 
 const iconMap: Record<string, typeof PlaySquare> = {
   PlaySquare,
@@ -22,18 +23,25 @@ const iconMap: Record<string, typeof PlaySquare> = {
 };
 
 const menuItems = [
-  { id: 'control', name: '测试控制台', icon: 'PlaySquare' },
-  { id: 'tasks', name: '测试任务', icon: 'CheckSquare' },
-  { id: 'scripts', name: '测试编排', icon: 'Code' },
-  { id: 'devices', name: '设备管理', icon: 'Server' },
-  { id: 'reports', name: '测试报告', icon: 'FileText' },
-  { id: 'api', name: '接口管理', icon: 'Link' },
-  { id: 'projects', name: '项目管理', icon: 'Folder' },
-  { id: 'settings', name: '设置中心', icon: 'Settings' },
+  { id: "tasks", name: "测试任务", icon: "CheckSquare", path: "/" },
+  { id: "control", name: "测试控制台", icon: "PlaySquare", path: "/test-control" },
+  { id: "scripts", name: "测试编排", icon: "Code", path: "/scripts" },
+  { id: "devices", name: "设备管理", icon: "Server", path: "/devices" },
+  { id: "reports", name: "测试报告", icon: "FileText", path: "/reports" },
+  { id: "api", name: "接口管理", icon: "Link", path: "/api" },
+  { id: "projects", name: "项目管理", icon: "Folder", path: "/projects" },
+  { id: "settings", name: "设置中心", icon: "Settings", path: "/settings" },
 ];
 
 export function Sidebar() {
-  const { activeMenuId, setActiveMenu } = useExecutionStore();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { setActiveMenu } = useExecutionStore();
+
+  const handleMenuClick = (item: typeof menuItems[0]) => {
+    setActiveMenu(item.id);
+    navigate(item.path);
+  };
 
   return (
     <div className="fixed left-0 top-0 bottom-0 w-[220px] bg-white flex flex-col border-r border-[#E5E7EB] z-50 overflow-hidden">
@@ -55,15 +63,15 @@ export function Sidebar() {
         <ul className="space-y-1">
           {menuItems.map((item) => {
             const Icon = iconMap[item.icon];
-            const isActive = activeMenuId === item.id;
+            const isActive = location.pathname === item.path;
             return (
               <li key={item.id}>
                 <button
-                  onClick={() => setActiveMenu(item.id)}
+                  onClick={() => handleMenuClick(item)}
                   className={`w-full h-11 flex items-center gap-3 px-3 rounded-xl text-sm transition-all ${
                     isActive
-                      ? 'bg-[#2563FF] text-white'
-                      : 'text-[#374151] hover:bg-[#F0F5FF]'
+                      ? "bg-[#2563FF] text-white"
+                      : "text-[#374151] hover:bg-[#F0F5FF]"
                   }`}
                 >
                   <Icon className="w-[18px] h-[18px]" />
@@ -84,7 +92,9 @@ export function Sidebar() {
             className="w-10 h-10 rounded-xl bg-[#E5E7EB]"
           />
           <div className="min-w-0">
-            <div className="text-[#1F2937] text-sm font-medium truncate">TestMaster</div>
+            <div className="text-[#1F2937] text-sm font-medium truncate">
+              TestMaster
+            </div>
             <div className="text-[#9CA3AF] text-xs">管理员</div>
           </div>
         </div>

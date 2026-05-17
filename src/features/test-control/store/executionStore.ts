@@ -56,7 +56,7 @@ export const useExecutionStore = create<ExecutionStore>((set) => ({
       runtime: { time: '00:01:32', device: 'iPhone 15 Pro' },
     },
   },
-  activeMenuId: 'control',
+  activeMenuId: 'tasks',
   logFilter: 'ALL',
   autoScroll: true,
   setActiveMenu: (id) => set({ activeMenuId: id }),
