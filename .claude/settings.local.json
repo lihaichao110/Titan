@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm install *)",
+      "Bash(pnpm approve-builds *)",
+      "Skill(superpowers:brainstorming)",
+      "Bash(scripts/start-server.sh *)",
+      "Bash(node scripts/server.cjs --project-dir /Users/lihaichao/Desktop/Titan)",
+      "Read(//private/tmp/brainstorm/state/**)",
+      "Skill(superpowers:writing-plans)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Skill(superpowers:requesting-code-review)",
+      "Bash(pnpm add *)",
+      "Bash(npm --version)",
+      "Bash(npm install *)",
+      "Bash(pnpm --version)",
+      "Bash(corepack enable *)",
+      "Bash(corepack prepare *)",
+      "Bash(npx pnpm *)",
+      "Bash(nvm use *)",
+      "Bash(npx shadcn@latest init -y)",
+      "Bash(npx shadcn@latest add button badge scroll-area separator select switch progress tooltip -y)",
+      "Bash(pnpm dev *)",
+      "Bash(curl -s http://localhost:1420)",
+      "Bash(pnpm build *)",
+      "Bash(npx shadcn@latest add label -y)",
+      "Bash(node -e \"const l = require\\('lucide-react'\\); console.log\\(Object.keys\\(l\\).filter\\(k => k.match\\(/^Task|^Node|^Api/\\)\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(pnpm remove *)",
+      "Bash(pkill -f \"vite\")"
+    ]
+  }
+}
