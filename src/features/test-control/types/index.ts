@@ -3,30 +3,50 @@ export type LogLevel = 'INFO' | 'SUCCESS' | 'ERROR';
 export type ExecutionStatus = 'running' | 'paused' | 'stopped';
 
 export interface ExecutionStep {
-  id: number;
+  step: number;
   name: string;
   locator: string;
   status: StepStatus;
   duration: string | null;
-  detail: string;
+  detail?: string;
 }
 
 export interface LogEntry {
-  timestamp: string;
+  time: string;
   level: LogLevel;
-  message: string;
+  msg: string;
+}
+
+export interface StatsProgress {
+  percent: number;
+  detail: string;
+}
+
+export interface StatsPassRate {
+  rate: string;
+  detail: string;
+}
+
+export interface StatsSteps {
+  total: number;
+  completed: number;
+}
+
+export interface StatsRuntime {
+  time: string;
+  device: string;
 }
 
 export interface StatsData {
-  executionProgress: { percentage: number; detail: string };
-  passRate: { rate: string; detail: string };
-  stepsInfo: { total: number; completed: number };
-  deviceFooter: { name: string; os: string };
+  progress: StatsProgress;
+  passRate: StatsPassRate;
+  steps: StatsSteps;
+  runtime: StatsRuntime;
 }
 
 export interface ExecutionContext {
   taskName: string;
-  environment: string;
+  deviceInfo: string;
   status: ExecutionStatus;
   startTime: string;
   elapsedTime: string;
@@ -37,7 +57,7 @@ export interface ExecutionContext {
 
 export interface MenuItem {
   id: string;
-  label: string;
+  name: string;
   icon: string;
   active: boolean;
 }
@@ -45,12 +65,5 @@ export interface MenuItem {
 export interface UserProfile {
   name: string;
   role: string;
-  avatar_url: string;
-}
-
-export interface DeviceContent {
-  title: string;
-  fields: { label: string; value: string }[];
-  action_button: string;
-  third_party_login: string[];
+  avatarUrl: string;
 }

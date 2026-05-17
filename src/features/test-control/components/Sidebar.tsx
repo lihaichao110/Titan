@@ -1,26 +1,35 @@
-import { PlaySquare, ListTodo, GitBranch, Database, FileText, Cloud, Box, Settings } from 'lucide-react';
+import {
+  PlaySquare,
+  CheckSquare,
+  Code,
+  Server,
+  FileText,
+  Link,
+  Folder,
+  Settings,
+} from 'lucide-react';
 import { useExecutionStore } from '../store/executionStore';
 
 const iconMap: Record<string, typeof PlaySquare> = {
   PlaySquare,
-  ListTodo,
-  GitBranch,
-  Database,
+  CheckSquare,
+  Code,
+  Server,
   FileText,
-  Cloud,
-  Box,
+  Link,
+  Folder,
   Settings,
 };
 
 const menuItems = [
-  { id: 'test_control', label: '测试控制台', icon: 'PlaySquare' },
-  { id: 'tasks', label: '测试任务', icon: 'ListTodo' },
-  { id: 'scripts', label: '测试编排', icon: 'GitBranch' },
-  { id: 'devices', label: '设备管理', icon: 'Database' },
-  { id: 'reports', label: '测试报告', icon: 'FileText' },
-  { id: 'api_mgmt', label: '接口管理', icon: 'Cloud' },
-  { id: 'projects', label: '项目管理', icon: 'Box' },
-  { id: 'settings', label: '设置中心', icon: 'Settings' },
+  { id: 'control', name: '测试控制台', icon: 'PlaySquare' },
+  { id: 'tasks', name: '测试任务', icon: 'CheckSquare' },
+  { id: 'scripts', name: '测试编排', icon: 'Code' },
+  { id: 'devices', name: '设备管理', icon: 'Server' },
+  { id: 'reports', name: '测试报告', icon: 'FileText' },
+  { id: 'api', name: '接口管理', icon: 'Link' },
+  { id: 'projects', name: '项目管理', icon: 'Folder' },
+  { id: 'settings', name: '设置中心', icon: 'Settings' },
 ];
 
 export function Sidebar() {
@@ -28,6 +37,7 @@ export function Sidebar() {
 
   return (
     <div className="h-full bg-slate-900 flex flex-col">
+      {/* Logo */}
       <div className="px-4 py-5 border-b border-slate-800">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
@@ -40,6 +50,7 @@ export function Sidebar() {
         </div>
       </div>
 
+      {/* Menu */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto">
         <ul className="space-y-1">
           {menuItems.map((item) => {
@@ -56,7 +67,7 @@ export function Sidebar() {
                   }`}
                 >
                   <Icon className="w-4 h-4" />
-                  <span>{item.label}</span>
+                  <span>{item.name}</span>
                 </button>
               </li>
             );
@@ -64,6 +75,7 @@ export function Sidebar() {
         </ul>
       </nav>
 
+      {/* User profile */}
       <div className="px-4 py-4 border-t border-slate-800">
         <div className="flex items-center gap-3">
           <img

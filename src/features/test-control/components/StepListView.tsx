@@ -8,16 +8,19 @@ const statusConfig = {
     icon: CheckCircle2,
     bgColor: 'bg-green-50 border-green-200',
     textColor: 'text-green-600',
+    numberBg: 'bg-green-100 text-green-600',
   },
   executing: {
     icon: Loader2,
-    bgColor: 'bg-blue-50 border-blue-200',
+    bgColor: 'bg-blue-50 border-blue-300',
     textColor: 'text-blue-600',
+    numberBg: 'bg-blue-600 text-white',
   },
   pending: {
     icon: Circle,
     bgColor: 'bg-slate-50 border-slate-200',
     textColor: 'text-slate-400',
+    numberBg: 'bg-slate-100 text-slate-400',
   },
 };
 
@@ -38,27 +41,36 @@ export function StepListView() {
 
       <ScrollArea className="flex-1">
         <div className="p-3 space-y-2">
-          {steps.map((step, index) => {
+          {steps.map((step) => {
             const config = statusConfig[step.status];
             const Icon = config.icon;
             const isExecuting = step.status === 'executing';
+            const isPassed = step.status === 'passed';
 
             return (
               <div
-                key={step.id}
+                key={step.step}
                 className={`p-3 rounded-lg border transition-colors ${
                   isExecuting ? config.bgColor : 'bg-slate-50 border-slate-200'
                 }`}
               >
                 <div className="flex items-start gap-3">
+                  {/* Step number */}
                   <div
                     className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-medium ${
-                      isExecuting ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'
+                      config.numberBg
                     }`}
                   >
-                    {index + 1}
+                    {isPassed ? (
+                      <Icon className="w-3.5 h-3.5" />
+                    ) : isExecuting ? (
+                      <Icon className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      step.step
+                    )}
                   </div>
 
+                  {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span
@@ -68,9 +80,6 @@ export function StepListView() {
                       >
                         {step.name}
                       </span>
-                      {isExecuting && (
-                        <Icon className="w-3 h-3 text-blue-600 animate-spin" />
-                      )}
                     </div>
 
                     <div className="text-xs text-slate-500 mt-0.5 truncate">{step.locator}</div>
@@ -80,6 +89,7 @@ export function StepListView() {
                     )}
                   </div>
 
+                  {/* Duration */}
                   {step.duration && (
                     <Badge variant="secondary" className="text-xs">
                       {step.duration}
