@@ -9,9 +9,9 @@ import { useExecutionStore } from '../store/executionStore';
 import type { LogLevel } from '../types';
 
 const levelColors: Record<LogLevel, string> = {
-  INFO: 'text-blue-500',
-  SUCCESS: 'text-emerald-500',
-  ERROR: 'text-red-500',
+  INFO: 'bg-blue-100 text-[#2563FF]',
+  SUCCESS: 'bg-green-100 text-[#16A34A]',
+  ERROR: 'bg-red-100 text-[#EF4444]',
 };
 
 export function LogTerminal() {
@@ -28,51 +28,56 @@ export function LogTerminal() {
   }, [filteredLogs, autoScroll]);
 
   return (
-    <div className="h-full flex flex-col bg-slate-50 rounded-lg border border-slate-200">
+    <div className="h-[640px] flex flex-col bg-white rounded-2xl shadow-[0_1px_2px_rgba(0,0,0,.04)] border border-[#E5E7EB] overflow-hidden">
       {/* Header toolbar */}
-      <div className="px-4 py-3 border-b border-slate-200 bg-white rounded-t-lg">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-slate-900">实时日志</h3>
+      <div className="h-14 px-6 flex items-center justify-between border-b border-[#E5E7EB]">
+        <h3 className="text-sm font-medium text-[#1F2937]">实时日志</h3>
 
-          <div className="flex items-center gap-3">
-            <Select value={logFilter} onValueChange={(v) => setLogFilter(v as LogLevel | 'ALL')}>
-              <SelectTrigger className="w-24 h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">全部</SelectItem>
-                <SelectItem value="INFO">INFO</SelectItem>
-                <SelectItem value="SUCCESS">SUCCESS</SelectItem>
-                <SelectItem value="ERROR">ERROR</SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="flex items-center gap-3">
+          <Select value={logFilter} onValueChange={(v) => setLogFilter(v as LogLevel | 'ALL')}>
+            <SelectTrigger className="w-24 h-8 text-xs bg-[#F9FAFB]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">全部</SelectItem>
+              <SelectItem value="INFO">INFO</SelectItem>
+              <SelectItem value="SUCCESS">SUCCESS</SelectItem>
+              <SelectItem value="ERROR">ERROR</SelectItem>
+            </SelectContent>
+          </Select>
 
-            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={clearLogs}>
-              <Trash2 className="w-3 h-3 mr-1" />
-              清空
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs border-[#E5E7EB] text-[#6B7280]"
+            onClick={clearLogs}
+          >
+            <Trash2 className="w-3 h-3 mr-1" />
+            清空
+          </Button>
         </div>
       </div>
 
       {/* Log entries */}
-      <ScrollArea className="flex-1 px-2 py-2" ref={scrollRef}>
-        <div className="font-mono text-xs space-y-1">
+      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+        <div className="font-mono text-xs space-y-2">
           {filteredLogs.map((log, index) => (
-            <div key={index} className="flex items-start gap-2 px-2 py-1 hover:bg-slate-100 rounded">
-              <span className="text-slate-400">{log.time}</span>
-              <span className={`font-medium ${levelColors[log.level]}`}>[{log.level}]</span>
-              <span className="text-slate-700">{log.msg}</span>
+            <div key={index} className="flex items-center gap-3 h-8">
+              <span className="text-[#9CA3AF] w-16 flex-shrink-0">{log.time}</span>
+              <span className={`px-2 py-0.5 rounded text-xs font-medium flex-shrink-0 ${levelColors[log.level]}`}>
+                {log.level}
+              </span>
+              <span className="text-[#374151] truncate">{log.msg}</span>
             </div>
           ))}
         </div>
       </ScrollArea>
 
       {/* Bottom: auto-scroll toggle */}
-      <div className="px-4 py-2 border-t border-slate-200 bg-white rounded-b-lg">
+      <div className="h-12 px-6 flex items-center border-t border-[#E5E7EB] bg-[#F9FAFB]">
         <div className="flex items-center gap-2">
           <Switch id="auto-scroll" checked={autoScroll} onCheckedChange={setAutoScroll} />
-          <Label htmlFor="auto-scroll" className="text-xs text-slate-600">
+          <Label htmlFor="auto-scroll" className="text-xs text-[#6B7280]">
             自动滚动
           </Label>
         </div>

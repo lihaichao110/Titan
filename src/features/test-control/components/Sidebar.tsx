@@ -36,22 +36,22 @@ export function Sidebar() {
   const { activeMenuId, setActiveMenu } = useExecutionStore();
 
   return (
-    <div className="h-full bg-slate-900 flex flex-col">
+    <div className="h-full bg-white flex flex-col border-r border-[#E5E7EB]">
       {/* Logo */}
-      <div className="px-4 py-5 border-b border-slate-800">
+      <div className="h-[84px] flex items-center pl-6 border-b border-[#E5E7EB]">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">T</span>
+          <div className="w-10 h-10 rounded-xl bg-[#2563FF] flex items-center justify-center">
+            <span className="text-white font-bold text-lg">T</span>
           </div>
           <div>
-            <div className="text-white font-semibold text-sm">Titan</div>
-            <div className="text-slate-500 text-xs">自动化测试平台</div>
+            <div className="text-[#1F2937] font-semibold text-base">Titan</div>
+            <div className="text-[#9CA3AF] text-xs">自动化测试平台</div>
           </div>
         </div>
       </div>
 
       {/* Menu */}
-      <nav className="flex-1 px-3 py-4 overflow-y-auto">
+      <nav className="flex-1 py-4 px-3 overflow-y-auto">
         <ul className="space-y-1">
           {menuItems.map((item) => {
             const Icon = iconMap[item.icon];
@@ -60,13 +60,13 @@ export function Sidebar() {
               <li key={item.id}>
                 <button
                   onClick={() => setActiveMenu(item.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                  className={`w-full h-11 flex items-center gap-3 px-3 rounded-xl text-sm transition-all ${
                     isActive
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                      ? 'bg-[#2563FF] text-white'
+                      : 'text-[#374151] hover:bg-[#F0F5FF]'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-[18px] h-[18px]" />
                   <span>{item.name}</span>
                 </button>
               </li>
@@ -76,16 +76,16 @@ export function Sidebar() {
       </nav>
 
       {/* User profile */}
-      <div className="px-4 py-4 border-t border-slate-800">
+      <div className="h-[72px] flex items-center px-4 border-t border-[#E5E7EB] bg-[#F9FAFB]">
         <div className="flex items-center gap-3">
           <img
             src="https://api.dicebear.com/7.x/avataaars/svg?seed=TestMaster"
             alt="avatar"
-            className="w-8 h-8 rounded-full bg-slate-700"
+            className="w-10 h-10 rounded-xl bg-[#E5E7EB]"
           />
           <div className="min-w-0">
-            <div className="text-white text-sm font-medium truncate">TestMaster</div>
-            <div className="text-slate-500 text-xs">管理员</div>
+            <div className="text-[#1F2937] text-sm font-medium truncate">TestMaster</div>
+            <div className="text-[#9CA3AF] text-xs">管理员</div>
           </div>
         </div>
       </div>

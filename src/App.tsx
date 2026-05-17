@@ -10,10 +10,12 @@ function App() {
   return (
     <MainLayout sidebar={<Sidebar />}>
       <HeaderToolbar />
-      <div className="flex-1 grid grid-cols-3 gap-4 p-4 min-h-0">
-        <DeviceSimulator />
-        <StepListView />
-        <LogTerminal />
+      <div className="flex-1 p-6 min-h-0">
+        <div className="grid grid-cols-[32%_36%_32%] gap-6 h-full">
+          <DeviceSimulator />
+          <StepListView />
+          <LogTerminal />
+        </div>
       </div>
       <StatsGrid />
     </MainLayout>

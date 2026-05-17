@@ -8,62 +8,64 @@ export function DeviceSimulator() {
   const { stats } = context;
 
   return (
-    <div className="h-full flex flex-col bg-white rounded-lg border border-slate-200">
+    <div className="h-[640px] flex flex-col bg-white rounded-2xl shadow-[0_1px_2px_rgba(0,0,0,.04)] border border-[#E5E7EB] overflow-hidden">
       {/* Top toolbar */}
-      <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+      <div className="h-14 px-6 flex items-center justify-between border-b border-[#E5E7EB]">
         <div className="flex items-center gap-2">
-          <Smartphone className="w-4 h-4 text-slate-600" />
-          <span className="text-sm font-medium text-slate-900">{stats.runtime.device}</span>
+          <Smartphone className="w-4 h-4 text-[#6B7280]" />
+          <span className="text-sm font-medium text-[#1F2937]">{stats.runtime.device}</span>
         </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="h-7 w-7">
-            <Expand className="w-4 h-4 text-slate-600" />
+            <Expand className="w-4 h-4 text-[#6B7280]" />
           </Button>
           <Button variant="ghost" size="icon" className="h-7 w-7">
-            <Minimize className="w-4 h-4 text-slate-600" />
+            <Minimize className="w-4 h-4 text-[#6B7280]" />
           </Button>
           <Button variant="ghost" size="icon" className="h-7 w-7">
-            <RotateCcw className="w-4 h-4 text-slate-600" />
+            <RotateCcw className="w-4 h-4 text-[#6B7280]" />
           </Button>
         </div>
       </div>
 
       {/* Device Frame */}
-      <div className="flex-1 p-4 flex items-center justify-center">
-        <div className="relative w-[260px] h-[560px] bg-slate-900 rounded-[40px] p-2 shadow-xl">
-          <div className="w-full h-full bg-white rounded-[32px] overflow-hidden">
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="relative w-[240px] h-[480px] bg-[#1F2937] rounded-[36px] p-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.1)]">
+          <div className="w-full h-full bg-white rounded-[30px] overflow-hidden">
             {/* Notch */}
-            <div className="h-8 bg-slate-900 flex items-center justify-center">
-              <div className="w-20 h-6 bg-black rounded-full" />
+            <div className="h-7 bg-[#1F2937] flex items-center justify-center">
+              <div className="w-16 h-5 bg-black rounded-full" />
             </div>
 
             {/* App Content */}
-            <div className="p-6 flex flex-col h-full">
-              <div className="flex-1">
-                <h2 className="text-xl font-bold text-slate-900 text-center mt-4">欢迎回来</h2>
+            <div className="p-5 flex flex-col h-full">
+              <div className="flex-1 flex flex-col">
+                <h2 className="text-lg font-bold text-[#1F2937] text-center mt-3">欢迎回来</h2>
 
-                <div className="mt-8 space-y-4">
-                  <div className="bg-slate-100 rounded-xl p-4">
-                    <label className="text-xs text-slate-500 mb-1 block">手机号码</label>
-                    <div className="text-sm text-slate-400">请输入手机号码</div>
+                <div className="mt-6 space-y-3">
+                  <div className="bg-[#F9FAFB] rounded-xl p-3">
+                    <label className="text-xs text-[#9CA3AF] mb-1 block">手机号码</label>
+                    <div className="text-sm text-[#D1D5DB]">请输入手机号码</div>
                   </div>
 
-                  <div className="bg-slate-100 rounded-xl p-4">
-                    <label className="text-xs text-slate-500 mb-1 block">密码</label>
-                    <div className="text-sm text-slate-400">请输入密码</div>
+                  <div className="bg-[#F9FAFB] rounded-xl p-3">
+                    <label className="text-xs text-[#9CA3AF] mb-1 block">密码</label>
+                    <div className="text-sm text-[#D1D5DB]">请输入密码</div>
                   </div>
                 </div>
 
-                <Button className="w-full mt-6 bg-blue-600 hover:bg-blue-700">登录</Button>
+                <Button className="w-full mt-5 bg-[#2563FF] hover:bg-[#1D4ED8] text-white text-sm h-10">
+                  登录
+                </Button>
 
                 {/* Third-party login */}
-                <div className="mt-6 flex items-center justify-center gap-4">
+                <div className="mt-5 flex items-center justify-center gap-3">
                   {['微信', 'QQ', 'Apple'].map((provider) => (
                     <div
                       key={provider}
-                      className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center"
+                      className="w-9 h-9 rounded-full bg-[#F3F4F6] flex items-center justify-center"
                     >
-                      <span className="text-xs text-slate-600">{provider[0]}</span>
+                      <span className="text-xs text-[#6B7280]">{provider[0]}</span>
                     </div>
                   ))}
                 </div>
@@ -71,31 +73,31 @@ export function DeviceSimulator() {
             </div>
 
             {/* Home indicator */}
-            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-32 h-1 bg-slate-400 rounded-full" />
+            <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-28 h-0.5 bg-[#D1D5DB] rounded-full" />
           </div>
         </div>
       </div>
 
       {/* Bottom toolbar */}
-      <div className="px-4 py-3 border-t border-slate-200">
-        <Separator className="mb-3" />
-        <div className="flex items-center justify-center gap-3">
+      <div className="h-14 px-6 flex items-center border-t border-[#E5E7EB]">
+        <Separator className="mb-2" />
+        <div className="flex items-center justify-center gap-3 w-full">
           <Button variant="ghost" size="icon" className="h-8 w-8">
-            <ZoomOut className="w-4 h-4" />
+            <ZoomOut className="w-4 h-4 text-[#6B7280]" />
           </Button>
-          <span className="text-xs text-slate-600 w-12 text-center font-medium">100%</span>
+          <span className="text-xs text-[#6B7280] w-12 text-center font-medium">100%</span>
           <Button variant="ghost" size="icon" className="h-8 w-8">
-            <ZoomIn className="w-4 h-4" />
+            <ZoomIn className="w-4 h-4 text-[#6B7280]" />
           </Button>
-          <div className="w-px h-4 bg-slate-200" />
+          <div className="w-px h-4 bg-[#E5E7EB] mx-1" />
           <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Camera className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <RotateCcw className="w-4 h-4" />
+            <Camera className="w-4 h-4 text-[#6B7280]" />
           </Button>
           <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Move className="w-4 h-4" />
+            <RotateCcw className="w-4 h-4 text-[#6B7280]" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Move className="w-4 h-4 text-[#6B7280]" />
           </Button>
         </div>
       </div>
