@@ -32,9 +32,11 @@ interface ExecutionStore {
   activeMenuId: string;
   logFilter: LogLevel | 'ALL';
   autoScroll: boolean;
+  deviceType: 'mobile' | 'pc';
   setActiveMenu: (id: string) => void;
   setLogFilter: (filter: LogLevel | 'ALL') => void;
   setAutoScroll: (enabled: boolean) => void;
+  setDeviceType: (type: 'mobile' | 'pc') => void;
   updateStepStatus: (step: number, status: ExecutionStep['status']) => void;
   addLog: (log: LogEntry) => void;
   clearLogs: () => void;
@@ -59,9 +61,11 @@ export const useExecutionStore = create<ExecutionStore>((set) => ({
   activeMenuId: 'tasks',
   logFilter: 'ALL',
   autoScroll: true,
+  deviceType: 'mobile',
   setActiveMenu: (id) => set({ activeMenuId: id }),
   setLogFilter: (filter) => set({ logFilter: filter }),
   setAutoScroll: (enabled) => set({ autoScroll: enabled }),
+  setDeviceType: (type) => set({ deviceType: type }),
   updateStepStatus: (stepNum, status) =>
     set((state) => ({
       context: {

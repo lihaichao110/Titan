@@ -1,10 +1,17 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useExecutionStore } from '../store/executionStore';
-import { Square, Pause, RotateCw } from 'lucide-react';
+import { Square, Pause, RotateCw, Smartphone, Monitor } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export function HeaderToolbar() {
-  const { context } = useExecutionStore();
+  const { context, deviceType, setDeviceType } = useExecutionStore();
   const { taskName, deviceInfo, status, startTime, elapsedTime } = context;
 
   return (
@@ -38,7 +45,28 @@ export function HeaderToolbar() {
       </div>
 
       {/* Right: Action buttons */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
+        <Select value={deviceType} onValueChange={(v) => setDeviceType(v as 'mobile' | 'pc')}>
+          <SelectTrigger className="w-28 h-8 bg-[#F9FAFB] border-[#E5E7EB] text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="mobile">
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-4 h-4" />
+                手机端
+              </div>
+            </SelectItem>
+            <SelectItem value="pc">
+              <div className="flex items-center gap-2">
+                <Monitor className="w-4 h-4" />
+                PC端
+              </div>
+            </SelectItem>
+          </SelectContent>
+        </Select>
+
+        <div className="w-px h-6 bg-[#E5E7EB] mx-1" />
         <Button
           variant="outline"
           size="sm"

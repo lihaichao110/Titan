@@ -20,7 +20,7 @@ const levelColors: Record<LogLevel, string> = {
   ERROR: "bg-red-100 text-[#EF4444]",
 };
 
-export function LogTerminal() {
+export function LogTerminal({ height = "h-[640px]" }: { height?: string }) {
   const {
     context,
     logFilter,
@@ -42,7 +42,9 @@ export function LogTerminal() {
   }, [filteredLogs, autoScroll]);
 
   return (
-    <div className="h-[640px] flex flex-col bg-white rounded-2xl shadow-[0_1px_2px_rgba(0,0,0,.04)] border border-[#E5E7EB] overflow-hidden">
+    <div 
+      className={`${height} flex flex-col bg-white rounded-2xl shadow-[0_1px_2px_rgba(0,0,0,.04)] border border-[#E5E7EB] overflow-hidden`}
+      >
       {/* Header toolbar */}
       <div className="h-14 px-5 flex items-center justify-between border-b border-[#E5E7EB]">
         <h3 className="text-sm font-medium text-[#1F2937]">实时日志</h3>

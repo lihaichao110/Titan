@@ -26,7 +26,13 @@
       "Bash(npx shadcn@latest add label -y)",
       "Bash(node -e \"const l = require\\('lucide-react'\\); console.log\\(Object.keys\\(l\\).filter\\(k => k.match\\(/^Task|^Node|^Api/\\)\\).join\\('\\\\n'\\)\\)\")",
       "Bash(pnpm remove *)",
-      "Bash(pkill -f \"vite\")"
+      "Bash(pkill -f \"vite\")",
+      "Bash(git -C /Users/lihaichao/Desktop/Titan log --oneline --all)",
+      "Bash(git -C /Users/lihaichao/Desktop/Titan ls-files)",
+      "Bash(git -C /Users/lihaichao/Desktop/Titan show bbc5928:package.json)",
+      "Bash(git *)",
+      "mcp__MiniMax__understand_image",
+      "Bash(pnpm tsc *)"
     ]
   }
 }

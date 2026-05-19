@@ -26,14 +26,20 @@ const statusConfig = {
   },
 };
 
-export function StepListView() {
+interface Props {
+  height?: string;
+}
+
+export function StepListView({ height = "h-[640px]" }: Props) {
   const { context } = useExecutionStore();
   const { steps } = context;
 
   const completedCount = steps.filter((s) => s.status === "passed").length;
 
   return (
-    <div className="h-[640px] flex flex-col bg-white rounded-2xl shadow-[0_1px_2px_rgba(0,0,0,.04)] border border-[#E5E7EB] overflow-hidden">
+    <div
+      className={`${height} flex flex-col bg-white rounded-2xl shadow-[0_1px_2px_rgba(0,0,0,.04)] border border-[#E5E7EB] overflow-hidden`}
+    >
       {/* Header */}
       <div className="h-14 px-5 flex items-center border-b border-[#E5E7EB]">
         <div>
