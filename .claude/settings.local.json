@@ -32,7 +32,13 @@
       "Bash(git -C /Users/lihaichao/Desktop/Titan show bbc5928:package.json)",
       "Bash(git *)",
       "mcp__MiniMax__understand_image",
-      "Bash(pnpm tsc *)"
+      "Bash(pnpm tsc *)",
+      "Bash(awk '{print $2}')",
+      "Bash(xargs kill -9)",
+      "Bash(npx tsc *)",
+      "Bash(npx tauri *)",
+      "Bash(pnpm tauri *)",
+      "mcp__MiniMax__web_search"
     ]
   }
 }

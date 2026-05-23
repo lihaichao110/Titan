@@ -84,10 +84,10 @@ export function TaskList({ activeTab, onTabChange, tasks }: TaskListProps) {
             <th className="px-4 text-left text-xs font-medium text-[#9CA3AF]">
               任务名称
             </th>
-            <th className="w-24 px-4 text-left text-xs font-medium text-[#9CA3AF]">
+            <th className="w-32 px-4 text-center text-xs font-medium text-[#9CA3AF]">
               任务类型
             </th>
-            <th className="w-24 px-4 text-left text-xs font-medium text-[#9CA3AF]">
+            <th className="w-32 px-4 text-center text-xs font-medium text-[#9CA3AF]">
               状态
             </th>
             <th className="w-24 px-4 text-left text-xs font-medium text-[#9CA3AF]">
@@ -129,14 +129,14 @@ export function TaskList({ activeTab, onTabChange, tasks }: TaskListProps) {
                     {task.description}
                   </div>
                 </td>
-                <td className="px-4">
+                <td className="px-4 text-center">
                   <span
                     className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${typeStyle.bg} ${typeStyle.text}`}
                   >
                     {task.type}
                   </span>
                 </td>
-                <td className="px-4">
+                <td className="px-4 text-center">
                   <span
                     className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${statusStyle.bg} ${statusStyle.text}`}
                   >
