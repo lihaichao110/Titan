@@ -1,8 +1,8 @@
-# Midscene.js 集成到 DeviceSimulator 方案
+# iOS USB 连接方案（自动管理 usbmuxd）
 
 ## Context
 
-在 Tauri 项目中集成 Midscene.js，实现 iOS 设备投屏到 DeviceSimulator 组件。Midscene.js 通过 WebDriverAgent (WDA) 控制 iOS 设备，获取截图并执行自动化操作。
+用户已通过 USB 连接到 iOS 设备，需要 Tauri 自动管理 usbmuxd 来实现 WDA 连接，而不是手动配置 deviceUrl。
 
 ---
 
@@ -13,148 +13,128 @@
 │                        Tauri App                            │
 │                                                             │
 │  ┌──────────────────┐    ┌──────────────────────────────┐  │
-│  │  DeviceSimulator │    │       Midscene.js            │  │
-│  │  (WebView 显示)  │◄───│  - ai() 执行操作            │  │
-│  │                  │    │  - aiQuery() 提取数据        │  │
-│  │  <img src={...}/>│    │  - aiAssert() 断言          │  │
+│  │  DeviceSimulator │    │     Midscene Integration     │  │
+│  │  (WebView 显示)  │◄───│                             │  │
 │  └──────────────────┘    └──────────────┬───────────────┘  │
 │                                          │                  │
 │  ┌───────────────────────────────────────▼───────────────┐  │
 │  │              Tauri Commands (Rust)                    │  │
-│  │  - get_screenshot(): 从 WDA 获取截图                 │  │
-│  │  - execute_action(x, y): 执行点击/输入                │  │
+│  │  - list_devices(): 列出 USB 连接的 iOS 设备          │  │
+│  │  - connect_wda(device_id): 连接 WDA 并返回截图      │  │
+│  │  - execute_tap(x, y): 执行点击                       │  │
 │  └───────────────────────────┬───────────────────────────┘  │
 └──────────────────────────────┼─────────────────────────────┘
-                               │ HTTP
+                               │ USB / Unix Socket
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                   iOS 设备 (WDA Server)                       │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │  WebDriverAgent                                        │ │
-│  │  - GET /screenshot  获取截图                          │ │
-│  │  - POST /element/{id}/click 点击元素                   │ │
-│  │  - POST /wda/screen/stream 实时流(可选)               │ │
-│  └─────────────────────────────────────────────────────────┘ │
+│                    usbmuxd (系统服务)                        │
+│  - 监听 /var/run/usbmuxd socket                           │
+│  - 转发 USB 流量到 TCP 端口                                │
+└─────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   iOS 设备 (WDA Server)                      │
+│  - 通过 USB 接收指令                                        │
+│  - 返回截图                                                │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 实现步骤
+## 实现方案
 
-### 步骤 1: 添加 Midscene.js 依赖
-
-```bash
-pnpm add @midscene/web
-```
-
-### 步骤 2: 添加 Tauri Rust 依赖
+### 1. 添加 Rust 依赖
 
 在 `src-tauri/Cargo.toml` 中添加：
 
 ```toml
 [dependencies]
-reqwest = { version = "0.12", features = ["json"] }  # HTTP 请求
-tokio = { version = "1", features = ["rt-multi-thread"] }  # 异步运行时
-base64 = "0.22"  # 截图编解码
+# 已有
+reqwest = { version = "0.12", features = ["json"] }
+tokio = { version = "1", features = ["rt-multi-thread"] }
+base64 = "0.22"
 ```
 
-### 步骤 3: 创建 Tauri Commands
+### 2. 创建设备管理模块
 
-创建 `src-tauri/src/commands/mod.rs`:
+创建 `src-tauri/src/commands/device.rs`：
 
 ```rust
-use base64::{engine::general_purpose::STANDARD, Engine};
-use reqwest;
+use serde::{Deserialize, Serialize};
+use std::process::Command;
 use tauri::command;
+use base64::{engine::general_purpose::STANDARD, Engine};
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct IOSDevice {
+    pub udid: String,
+    pub name: String,
+    pub product_type: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ConnectionResult {
+    pub success: bool,
+    pub device_url: Option<String>,
+    pub error: Option<String>,
+}
+
+/// List connected iOS devices via system_profiler or idevice_id
 #[command]
-pub async fn get_device_screenshot(device_url: String) -> Result<String, String> {
-    let url = format!("{}/screenshot", device_url);
-    let response = reqwest::get(&url)
-        .await
+pub async fn list_ios_devices() -> Result<Vec<IOSDevice>, String> {
+    // Use system_profiler to get USB connected iOS devices
+    let output = Command::new("system_profiler")
+        .args(&["SPUSBDataType", "-json"])
+        .output()
         .map_err(|e| e.to_string())?;
 
-    let bytes = response.bytes().await.map_err(|e| e.to_string())?;
-    let base64_str = STANDARD.encode(bytes);
-    Ok(format!("data:image/png;base64,{}", base64_str))
+    // Parse output to find iOS devices...
+    // For now, return mock data if no real implementation
+    Ok(vec![
+        IOSDevice {
+            udid: "00001234-0000000000000000".to_string(),
+            name: "iPhone".to_string(),
+            product_type: "iPhone15,2".to_string(),
+        }
+    ])
 }
 
+/// Connect to WDA on a specific device via USB tunnel
 #[command]
-pub async fn execute_tap(x: i32, y: i32, device_url: String) -> Result<(), String> {
-    let url = format!("{}/wda/touch/perform", device_url);
-    let body = serde_json::json!({
-        "actions": [{"action": "tap", "x": x, "y": y}]
-    });
+pub async fn connect_wda(udid: String) -> Result<ConnectionResult, String> {
+    // 1. Start iproxy in background for this device
+    // 2. Wait for port forwarding to be ready
+    // 3. Return localhost URL
 
-    reqwest::Client::new()
-        .post(&url)
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
+    let local_port = 8100;
+    let device_port = 8100;
 
-    Ok(())
+    // Use iproxy to forward port
+    let child = Command::new("iproxy")
+        .args(&[&local_port.to_string(), &device_port.to_string()])
+        .arg("-u")
+        .arg(&udid)
+        .spawn()
+        .map_err(|e| format!("Failed to start iproxy: {}", e))?;
+
+    // Store child process for cleanup later
+
+    Ok(ConnectionResult {
+        success: true,
+        device_url: Some(format!("http://127.0.0.1:{}", local_port)),
+        error: None,
+    })
 }
 ```
 
-### 步骤 4: 更新 Store
+### 3. 修改 screenshot.rs 使用 localhost 连接
 
-在 `executionStore.ts` 中添加：
+由于 iproxy 已经转发端口，WDA 连接地址固定为 `http://127.0.0.1:8100`
 
-```typescript
-interface ExecutionStore {
-  // ... existing
-  deviceUrl: string;  // e.g., "http://192.168.1.100:8100"
-  currentScreenshot: string;
-  setDeviceUrl: (url: string) => void;
-  updateScreenshot: (screenshot: string) => void;
-}
-```
+### 4. 前端修改
 
-### 步骤 5: 更新 DeviceSimulator 组件
-
-```tsx
-import { MidsceneProvider, useMidscene } from '@midscene/web';
-
-export function DeviceSimulator() {
-  const { screenshot, action } = useMidscene({
-    deviceUrl: 'http://192.168.1.100:8100'
-  });
-
-  return (
-    <div className="h-[640px] flex flex-col bg-white rounded-2xl ...">
-      {/* 显示截图 */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        {screenshot ? (
-          <img src={screenshot} className="max-w-full max-h-full" />
-        ) : (
-          <div>等待连接设备...</div>
-        )}
-      </div>
-    </div>
-  );
-}
-```
-
-### 步骤 6: 初始化 Midscene
-
-在 `TestControlPage` 或 `App` 中初始化：
-
-```tsx
-import { MidsceneProvider } from '@midscene/web';
-
-function App() {
-  return (
-    <MidsceneProvider config={{
-      modelName: 'qwen-vl-max',
-      apiKey: process.env.OPENAI_API_KEY,
-    }}>
-      <YourApp />
-    </MidsceneProvider>
-  );
-}
-```
+在 HeaderToolbar 添加设备选择下拉框，连接不同的 iOS 设备。
 
 ---
 
@@ -162,27 +142,17 @@ function App() {
 
 | 文件 | 修改内容 |
 |------|----------|
-| `package.json` | 添加 `@midscene/web` |
-| `src-tauri/Cargo.toml` | 添加 `reqwest`, `tokio`, `base64` |
-| `src-tauri/src/commands/mod.rs` | 新建命令模块 |
-| `src-tauri/src/lib.rs` | 注册命令 |
-| `src/features/test-control/store/executionStore.ts` | 添加截图状态 |
-| `src/features/test-control/components/DeviceSimulator.tsx` | 显示截图 |
-| `src/app/App.tsx` | 添加 MidsceneProvider |
-
----
-
-## 验证方式
-
-1. 启动 Tauri 应用
-2. 确认 iOS 设备已安装并运行 WDA Server
-3. 在 DeviceSimulator 中看到 iOS 设备截图
-4. 使用 `ai('点击登录按钮')` 测试 AI 控制
+| `src-tauri/src/commands/device.rs` | 新建：设备管理命令 |
+| `src-tauri/src/commands/mod.rs` | 添加 device 模块 |
+| `src-tauri/src/lib.rs` | 注册 device 命令 |
+| `src/features/test-control/store/executionStore.ts` | 添加设备列表状态 |
+| `src/features/test-control/components/HeaderToolbar.tsx` | 添加设备选择器 |
+| `src/features/test-control/components/DeviceSimulator.tsx` | 修改为自动刷新截图 |
 
 ---
 
 ## 前置条件
 
-用户需要在 iOS 设备上安装 WebDriverAgent：
-- 通过 Xcode 安装（需要开发者账号）
-- 或使用 altdeploy 等工具免 Xcode 安装
+1. macOS 上需要安装 `libimobiledevice`（包含 iproxy）
+2. iOS 设备已通过 USB 连接并信任此电脑
+3. WDA 已在 iOS 设备上运行

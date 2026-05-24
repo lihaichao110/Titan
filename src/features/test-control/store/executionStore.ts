@@ -33,10 +33,16 @@ interface ExecutionStore {
   logFilter: LogLevel | 'ALL';
   autoScroll: boolean;
   deviceType: 'mobile' | 'pc';
+  deviceUrl: string;
+  selectedDeviceUdid: string | null;
+  currentScreenshot: string;
   setActiveMenu: (id: string) => void;
   setLogFilter: (filter: LogLevel | 'ALL') => void;
   setAutoScroll: (enabled: boolean) => void;
   setDeviceType: (type: 'mobile' | 'pc') => void;
+  setDeviceUrl: (url: string) => void;
+  setSelectedDeviceUdid: (udid: string | null) => void;
+  setScreenshot: (screenshot: string) => void;
   updateStepStatus: (step: number, status: ExecutionStep['status']) => void;
   addLog: (log: LogEntry) => void;
   clearLogs: () => void;
@@ -62,10 +68,16 @@ export const useExecutionStore = create<ExecutionStore>((set) => ({
   logFilter: 'ALL',
   autoScroll: true,
   deviceType: 'mobile',
+  deviceUrl: '',
+  selectedDeviceUdid: null,
+  currentScreenshot: '',
   setActiveMenu: (id) => set({ activeMenuId: id }),
   setLogFilter: (filter) => set({ logFilter: filter }),
   setAutoScroll: (enabled) => set({ autoScroll: enabled }),
   setDeviceType: (type) => set({ deviceType: type }),
+  setDeviceUrl: (url) => set({ deviceUrl: url }),
+  setSelectedDeviceUdid: (udid) => set({ selectedDeviceUdid: udid }),
+  setScreenshot: (screenshot) => set({ currentScreenshot: screenshot }),
   updateStepStatus: (stepNum, status) =>
     set((state) => ({
       context: {

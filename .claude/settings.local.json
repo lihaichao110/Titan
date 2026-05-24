@@ -38,7 +38,28 @@
       "Bash(npx tsc *)",
       "Bash(npx tauri *)",
       "Bash(pnpm tauri *)",
-      "mcp__MiniMax__web_search"
+      "mcp__MiniMax__web_search",
+      "Bash(cargo check *)",
+      "Bash(npm run *)",
+      "Bash(kill 47711)",
+      "Bash(~/.nvm/versions/node/v22.17.0/bin/pnpm approve-builds *)",
+      "Bash(~/.nvm/versions/node/v22.17.0/bin/pnpm config *)",
+      "Bash(system_profiler SPUSBDataType -json)",
+      "Bash(cargo build *)",
+      "Bash(iproxy --version)",
+      "Bash(idevicescreenshot --help)",
+      "Bash(pymobiledevice3 --version)",
+      "Bash(pipx run *)",
+      "Bash(pip3 show *)",
+      "Bash(python3 *)",
+      "Bash(brew list *)",
+      "Bash(uv pip *)",
+      "Bash(/Users/lihaichao/.local/share/uv/python/cpython-3.11-macos-aarch64-none/bin/python3.11 -m pip list)",
+      "Bash(pyenv versions *)",
+      "Bash(zsh *)",
+      "Bash(HOME=/Users/lihaichao /Users/lihaichao/.pyenv/shims/pymobiledevice3 usbmux *)",
+      "Read(//tmp/**)",
+      "Read(//private/tmp/**)"
     ]
   }
 }
