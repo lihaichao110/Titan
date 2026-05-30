@@ -12,7 +12,7 @@ export function TasksPage() {
   const totalPages = 13;
 
   return (
-    <div className="p-6 bg-[#F5F7FB] min-h-screen">
+    <div className="h-full overflow-y-auto overscroll-contain p-6 bg-[#F5F7FB]">
       <PageHeader />
       <ActionToolbar />
       <StatsCards data={statsCardsData} />

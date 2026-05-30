@@ -5,9 +5,9 @@ import { Sidebar } from "@/features/test-control/components/Sidebar";
 export function MainLayout() {
   return (
     <Theme>
-      <div className="min-h-screen bg-[#F5F7FB]">
+      <div className="h-screen bg-[#F5F7FB] overflow-hidden">
         <Sidebar />
-        <main className="ml-[220px] flex flex-col min-h-screen overflow-x-hidden">
+        <main className="ml-[220px] flex h-full min-h-0 flex-col overflow-hidden">
           <Outlet />
         </main>
       </div>

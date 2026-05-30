@@ -5,9 +5,6 @@ pub enum AppError {
     #[error("pymobiledevice3 未安装，请运行: pipx install pymobiledevice3")]
     NotInstalled,
 
-    #[error("tunneld 未运行，请运行: sudo pymobiledevice3 remote tunneld")]
-    TunneldNotRunning,
-
     #[error("截图失败: {0}")]
     ScreenshotFailed(String),
 

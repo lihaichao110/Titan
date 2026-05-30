@@ -1,8 +1,8 @@
-use std::process::Command;
+use log::{error, info, warn};
 use std::path::PathBuf;
-use log::{info, warn, error};
+use std::process::Command;
 
-use base64::{Engine, engine::general_purpose::STANDARD};
+use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::{Deserialize, Serialize};
 
 use crate::error::{AppError, AppResult};
@@ -21,9 +21,8 @@ fn find_pymobiledevice3() -> Option<String> {
     // 1. 直接尝试 pymobiledevice3 命令（假设 PATH 已正确配置）
     info!("Trying direct 'pymobiledevice3' command...");
     if let Ok(output) = Command::new("pymobiledevice3").arg("--help").output() {
-        let stdout = String::from_utf8_lossy(&output.stdout);
+        let _stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
-        info!("  result: success={}, stdout contains pymobiledevice3: {}", output.status.success(), stdout.contains("pymobiledevice3") || stderr.contains("pymobiledevice3"));
         if output.status.success() || stderr.contains("pymobiledevice3") {
             return Some("pymobiledevice3".to_string());
         }
@@ -38,7 +37,6 @@ fn find_pymobiledevice3() -> Option<String> {
             cmd.env("HOME", &home);
             if let Ok(output) = cmd.arg("--help").output() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                info!("  result: success={}, stderr contains pymobiledevice3: {}", output.status.success(), stderr.contains("pymobiledevice3"));
                 if output.status.success() || stderr.contains("pymobiledevice3") {
                     return Some(pyenv_shim.to_string_lossy().to_string());
                 }
@@ -57,17 +55,22 @@ fn find_pymobiledevice3() -> Option<String> {
         if pyenv_python.exists() {
             // 先用 --version 检查 Python 是否正常
             if let Ok(version_output) = Command::new(&pyenv_python).arg("--version").output() {
-                info!("  Python version: {}", String::from_utf8_lossy(&version_output.stdout).trim());
+                info!(
+                    "  Python version: {}",
+                    String::from_utf8_lossy(&version_output.stdout).trim()
+                );
             }
             // 用这个 Python 运行 pymobiledevice3
             let mut cmd = Command::new(&pyenv_python);
             cmd.arg("-m").arg("pymobiledevice3").arg("--help");
             if let Ok(output) = cmd.output() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                info!("  python -m result: success={}, stderr: {}", output.status.success(), stderr);
                 if output.status.success() || stderr.contains("pymobiledevice3") {
                     // 返回 pyenv Python 路径和 -m 参数
-                    return Some(format!("{} -m pymobiledevice3", pyenv_python.to_string_lossy()));
+                    return Some(format!(
+                        "{} -m pymobiledevice3",
+                        pyenv_python.to_string_lossy()
+                    ));
                 }
             }
         }
@@ -82,7 +85,6 @@ fn find_pymobiledevice3() -> Option<String> {
                 info!("  Found at: {}, testing...", full_path.display());
                 if let Ok(output) = Command::new(&full_path).arg("--help").output() {
                     let stderr = String::from_utf8_lossy(&output.stderr);
-                    info!("  result: success={}, stderr contains pymobiledevice3: {}", output.status.success(), stderr.contains("pymobiledevice3"));
                     if output.status.success() || stderr.contains("pymobiledevice3") {
                         return Some(full_path.to_string_lossy().to_string());
                     }
@@ -105,22 +107,6 @@ pub fn check_tunneld_running() -> bool {
         .output()
         .map(|o| !o.stdout.is_empty())
         .unwrap_or(false)
-}
-
-pub fn start_tunneld() -> AppResult<()> {
-    let pymobile = find_pymobiledevice3()
-        .ok_or(AppError::NotInstalled)?;
-
-    let parts: Vec<&str> = pymobile.split_whitespace().collect();
-    let home = std::env::var("HOME").unwrap_or_default();
-    let mut cmd = Command::new(parts[0]);
-    if parts.len() > 1 {
-        cmd.args(&parts[1..]);
-    }
-    cmd.env("HOME", &home);
-    cmd.args(["remote", "tunneld"]);
-    cmd.spawn().map_err(|_e| AppError::TunneldNotRunning)?;
-    Ok(())
 }
 
 #[derive(Deserialize)]
@@ -187,7 +173,6 @@ pub fn list_devices() -> AppResult<Vec<DeviceInfo>> {
     info!("Command exit status: {}", output.status);
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    info!("stdout: {}", stdout);
     if !stderr.is_empty() {
         info!("stderr: {}", stderr);
     }
@@ -199,15 +184,20 @@ pub fn list_devices() -> AppResult<Vec<DeviceInfo>> {
     let devices: Vec<UsbmuxDevice> = serde_json::from_str(&stdout)
         .map_err(|e| AppError::ScreenshotFailed(format!("JSON parse error: {}", e)))?;
 
-    Ok(devices.into_iter().map(|d| DeviceInfo { udid: d.udid, name: d.name }).collect())
+    Ok(devices
+        .into_iter()
+        .map(|d| DeviceInfo {
+            udid: d.udid,
+            name: d.name,
+        })
+        .collect())
 }
 
 /// 固定的临时截图文件路径
 static TEMP_SCREENSHOT: &str = "/tmp/titan_screenshot.png";
 
 pub fn capture_screen(udid: &str) -> AppResult<String> {
-    let pymobile = find_pymobiledevice3()
-        .ok_or(AppError::NotInstalled)?;
+    let pymobile = find_pymobiledevice3().ok_or(AppError::NotInstalled)?;
 
     let parts: Vec<&str> = pymobile.split_whitespace().collect();
     let home = std::env::var("HOME").unwrap_or_default();
@@ -217,13 +207,31 @@ pub fn capture_screen(udid: &str) -> AppResult<String> {
     let output = if parts[0].contains(".pyenv/versions") {
         let mut cmd = Command::new(parts[0]);
         cmd.env("HOME", &home);
-        cmd.args(["-m", "pymobiledevice3", "developer", "dvt", "screenshot", "--udid", udid, temp_path]);
+        cmd.args([
+            "-m",
+            "pymobiledevice3",
+            "developer",
+            "dvt",
+            "screenshot",
+            "--udid",
+            udid,
+            temp_path,
+        ]);
         cmd.output()
             .map_err(|e| AppError::ScreenshotFailed(e.to_string()))?
     } else if parts.len() > 2 && parts[1] == "-m" {
         let mut cmd = Command::new(parts[0]);
         cmd.env("HOME", &home);
-        cmd.args(["-m", "pymobiledevice3", "developer", "dvt", "screenshot", "--udid", udid, temp_path]);
+        cmd.args([
+            "-m",
+            "pymobiledevice3",
+            "developer",
+            "dvt",
+            "screenshot",
+            "--udid",
+            udid,
+            temp_path,
+        ]);
         cmd.output()
             .map_err(|e| AppError::ScreenshotFailed(e.to_string()))?
     } else {
@@ -240,12 +248,118 @@ pub fn capture_screen(udid: &str) -> AppResult<String> {
     }
 
     // 读取临时文件
-    let img_data = std::fs::read(temp_path)
-        .map_err(|e| AppError::ScreenshotFailed(format!("Failed to read screenshot file: {}", e)))?;
+    let img_data = std::fs::read(temp_path).map_err(|e| {
+        AppError::ScreenshotFailed(format!("Failed to read screenshot file: {}", e))
+    })?;
 
     // 删除临时文件
     let _ = std::fs::remove_file(temp_path);
 
     let base64_str = STANDARD.encode(&img_data);
     Ok(format!("data:image/png;base64,{}", base64_str))
+}
+
+pub fn dvt_swipe(x1: f64, y1: f64, x2: f64, y2: f64, duration: f64, udid: &str) -> AppResult<()> {
+    let pymobile = find_pymobiledevice3().ok_or(AppError::NotInstalled)?;
+
+    let parts: Vec<&str> = pymobile.split_whitespace().collect();
+    let home = std::env::var("HOME").unwrap_or_default();
+
+    let output = if parts[0].contains(".pyenv/versions") {
+        let mut cmd = Command::new(parts[0]);
+        cmd.env("HOME", &home);
+        cmd.args([
+            "-m",
+            "pymobiledevice3",
+            "developer",
+            "dvt",
+            "swipe",
+            &x1.to_string(),
+            &y1.to_string(),
+            &x2.to_string(),
+            &y2.to_string(),
+            &duration.to_string(),
+            "--udid",
+            udid,
+        ]);
+        cmd.output()
+            .map_err(|e| AppError::ScreenshotFailed(e.to_string()))?
+    } else if parts.len() > 2 && parts[1] == "-m" {
+        let mut cmd = Command::new(parts[0]);
+        cmd.env("HOME", &home);
+        cmd.args([
+            "-m",
+            "pymobiledevice3",
+            "developer",
+            "dvt",
+            "swipe",
+            &x1.to_string(),
+            &y1.to_string(),
+            &x2.to_string(),
+            &y2.to_string(),
+            &duration.to_string(),
+            "--udid",
+            udid,
+        ]);
+        cmd.output()
+            .map_err(|e| AppError::ScreenshotFailed(e.to_string()))?
+    } else {
+        let mut cmd = Command::new(&pymobile);
+        cmd.env("HOME", &home);
+        cmd.args([
+            "developer",
+            "dvt",
+            "swipe",
+            &x1.to_string(),
+            &y1.to_string(),
+            &x2.to_string(),
+            &y2.to_string(),
+            &duration.to_string(),
+            "--udid",
+            udid,
+        ]);
+        cmd.output()
+            .map_err(|e| AppError::ScreenshotFailed(e.to_string()))?
+    };
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(AppError::ScreenshotFailed(stderr.to_string()));
+    }
+
+    Ok(())
+}
+
+pub fn auto_pair_device() -> AppResult<()> {
+    let pymobile = find_pymobiledevice3().ok_or(AppError::NotInstalled)?;
+
+    let parts: Vec<&str> = pymobile.split_whitespace().collect();
+    let home = std::env::var("HOME").unwrap_or_default();
+
+    let output = if parts[0].contains(".pyenv/versions") {
+        let mut cmd = Command::new(parts[0]);
+        cmd.env("HOME", &home);
+        cmd.args(["-m", "pymobiledevice3", "lockdown", "pair"]);
+        cmd.output()
+            .map_err(|e| AppError::ScreenshotFailed(e.to_string()))?
+    } else if parts.len() > 2 && parts[1] == "-m" {
+        let mut cmd = Command::new(parts[0]);
+        cmd.env("HOME", &home);
+        cmd.args(["-m", "pymobiledevice3", "lockdown", "pair"]);
+        cmd.output()
+            .map_err(|e| AppError::ScreenshotFailed(e.to_string()))?
+    } else {
+        let mut cmd = Command::new(&pymobile);
+        cmd.env("HOME", &home);
+        cmd.args(["lockdown", "pair"]);
+        cmd.output()
+            .map_err(|e| AppError::ScreenshotFailed(e.to_string()))?
+    };
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(AppError::ScreenshotFailed(stderr.to_string()));
+    }
+
+    Ok(())
 }

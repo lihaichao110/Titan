@@ -50,6 +50,7 @@ export function HeaderToolbar() {
           variant="outline"
           size="sm"
           className="border-[#EF4444] text-[#EF4444] hover:bg-red-50 hover:text-[#EF4444] hover:border-[#EF4444]"
+          disabled={deviceType === 'pc'}
         >
           <Square className="w-4 h-4 mr-1.5" />
           停止
@@ -58,6 +59,7 @@ export function HeaderToolbar() {
           variant="outline"
           size="sm"
           className="border-[#E5E7EB] text-[#374151] hover:bg-gray-50"
+          disabled={deviceType === 'pc'}
         >
           <Pause className="w-4 h-4 mr-1.5" />
           暂停

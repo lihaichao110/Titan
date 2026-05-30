@@ -1,4 +1,8 @@
+packages:
+  - "."
+
 allowBuilds:
+  appium: true
   esbuild: true
   sharp: true
 

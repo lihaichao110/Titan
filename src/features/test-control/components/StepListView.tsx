@@ -24,6 +24,13 @@ const statusConfig = {
     textColor: "text-[#D1D5DB]",
     lineColor: "#D1D5DB",
   },
+  failed: {
+    icon: Circle,
+    bgColor: "bg-[#FEE2E2]",
+    borderColor: "border-[#EF4444]",
+    textColor: "text-[#EF4444]",
+    lineColor: "#EF4444",
+  },
 };
 
 interface Props {
@@ -38,7 +45,7 @@ export function StepListView({ height = "h-[640px]" }: Props) {
 
   return (
     <div
-      className={`${height} flex flex-col bg-white rounded-2xl shadow-[0_1px_2px_rgba(0,0,0,.04)] border border-[#E5E7EB] overflow-hidden`}
+      className={`${height} min-w-0 flex flex-col bg-white rounded-2xl shadow-[0_1px_2px_rgba(0,0,0,.04)] border border-[#E5E7EB] overflow-hidden`}
     >
       {/* Header */}
       <div className="h-14 px-5 flex items-center border-b border-[#E5E7EB]">
@@ -51,8 +58,8 @@ export function StepListView({ height = "h-[640px]" }: Props) {
       </div>
 
       {/* Step list */}
-      <ScrollArea className="flex-1">
-        <div className="relative p-4">
+      <ScrollArea className="flex-1 min-w-0">
+        <div className="relative min-w-0 p-4">
           {/* Single vertical connecting line - behind items */}
           <div className="absolute left-11 top-6 bottom-6 w-0.5 bg-[#E5E7EB]" />
 
@@ -65,7 +72,7 @@ export function StepListView({ height = "h-[640px]" }: Props) {
             return (
               <div
                 key={step.step}
-                className={`relative flex items-center mb-5 last:mb-0 pl-4 ${isExecuting ? "py-3 border border-[#2563EB] rounded-lg bg-[#EFF6FF]" : ""}`}
+                className={`relative flex min-w-0 items-center mb-5 last:mb-0 pl-4 ${isExecuting ? "py-3 border border-[#2563EB] rounded-lg bg-[#EFF6FF]" : ""}`}
               >
                 {/* Node circle - centered on the vertical line */}
                 <div
@@ -84,9 +91,9 @@ export function StepListView({ height = "h-[640px]" }: Props) {
 
                 {/* Content row */}
                 <div className={`flex-1 min-w-0 ml-4 pr-4`}>
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center justify-between gap-3">
                     <span
-                      className={`text-sm font-medium ${isExecuting ? "text-[#2563EB]" : "text-[#1F2937]"}`}
+                      className={`min-w-0 break-words text-sm font-medium ${isExecuting ? "text-[#2563EB]" : "text-[#1F2937]"}`}
                     >
                       {step.name}
                     </span>
@@ -97,13 +104,8 @@ export function StepListView({ height = "h-[640px]" }: Props) {
                     )}
                   </div>
                   {step.locator && (
-                    <div className="text-xs text-[#6B7280] mt-0.5">
+                    <div className="min-w-0 break-words text-xs text-[#6B7280] mt-0.5">
                       {step.locator}
-                    </div>
-                  )}
-                  {step.detail && (
-                    <div className="text-xs text-[#2563EB] mt-0.5">
-                      {step.detail}
                     </div>
                   )}
                 </div>

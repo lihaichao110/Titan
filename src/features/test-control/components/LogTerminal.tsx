@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -30,20 +30,20 @@ export function LogTerminal({ height = "h-[640px]" }: { height?: string }) {
     clearLogs,
   } = useExecutionStore();
   const { logs } = context;
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   const filteredLogs =
     logFilter === "ALL" ? logs : logs.filter((l) => l.level === logFilter);
 
-  useEffect(() => {
-    if (autoScroll && scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  useLayoutEffect(() => {
+    if (autoScroll && bottomRef.current) {
+      bottomRef.current.scrollIntoView({ block: "end" });
     }
-  }, [filteredLogs, autoScroll]);
+  }, [autoScroll, logFilter, filteredLogs.length]);
 
   return (
     <div 
-      className={`${height} flex flex-col bg-white rounded-2xl shadow-[0_1px_2px_rgba(0,0,0,.04)] border border-[#E5E7EB] overflow-hidden`}
+      className={`${height} min-w-0 flex flex-col bg-white rounded-2xl shadow-[0_1px_2px_rgba(0,0,0,.04)] border border-[#E5E7EB] overflow-hidden`}
       >
       {/* Header toolbar */}
       <div className="h-14 px-5 flex items-center justify-between border-b border-[#E5E7EB]">
@@ -78,10 +78,10 @@ export function LogTerminal({ height = "h-[640px]" }: { height?: string }) {
       </div>
 
       {/* Log entries - smaller font, tighter spacing */}
-      <ScrollArea className="flex-1" ref={scrollRef}>
-        <div className="font-mono text-xs p-4 space-y-2">
+      <ScrollArea className="flex-1 min-w-0">
+        <div className="min-w-0 font-mono text-xs p-4 space-y-2">
           {filteredLogs.map((log, index) => (
-            <div key={index} className="flex items-start gap-3">
+            <div key={index} className="flex min-w-0 items-start gap-3">
               <span className="text-[#9CA3AF] w-16 flex-shrink-0">
                 {log.time}
               </span>
@@ -90,9 +90,12 @@ export function LogTerminal({ height = "h-[640px]" }: { height?: string }) {
               >
                 {log.level}
               </span>
-              <span className="text-[#374151] break-all">{log.msg}</span>
+              <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[#374151]">
+                {log.msg}
+              </span>
             </div>
           ))}
+          <div ref={bottomRef} />
         </div>
       </ScrollArea>
 

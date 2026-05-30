@@ -1,4 +1,4 @@
-export type StepStatus = 'passed' | 'executing' | 'pending';
+export type StepStatus = 'passed' | 'executing' | 'pending' | 'failed';
 export type LogLevel = 'INFO' | 'SUCCESS' | 'ERROR';
 export type ExecutionStatus = 'running' | 'paused' | 'stopped';
 

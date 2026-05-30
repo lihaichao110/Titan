@@ -43,7 +43,9 @@ interface ExecutionStore {
   setDeviceUrl: (url: string) => void;
   setSelectedDeviceUdid: (udid: string | null) => void;
   setScreenshot: (screenshot: string) => void;
+  setExecutionSteps: (steps: ExecutionStep[]) => void;
   updateStepStatus: (step: number, status: ExecutionStep['status']) => void;
+  updateStepResult: (step: number, result: Partial<ExecutionStep>) => void;
   addLog: (log: LogEntry) => void;
   clearLogs: () => void;
 }
@@ -78,6 +80,25 @@ export const useExecutionStore = create<ExecutionStore>((set) => ({
   setDeviceUrl: (url) => set({ deviceUrl: url }),
   setSelectedDeviceUdid: (udid) => set({ selectedDeviceUdid: udid }),
   setScreenshot: (screenshot) => set({ currentScreenshot: screenshot }),
+  setExecutionSteps: (steps) =>
+    set((state) => ({
+      context: {
+        ...state.context,
+        steps,
+        stats: {
+          ...state.context.stats,
+          progress: {
+            percent: steps.length ? (steps.filter((s) => s.status === 'passed').length / steps.length) * 100 : 0,
+            detail: `${steps.filter((s) => s.status === 'passed').length}/${steps.length}`,
+          },
+          passRate: {
+            rate: steps.length ? `${Math.round((steps.filter((s) => s.status === 'passed').length / steps.length) * 100)}%` : '0%',
+            detail: `${steps.filter((s) => s.status === 'passed').length}/${steps.length}`,
+          },
+          steps: { total: steps.length, completed: steps.filter((s) => s.status === 'passed').length },
+        },
+      },
+    })),
   updateStepStatus: (stepNum, status) =>
     set((state) => ({
       context: {
@@ -87,6 +108,31 @@ export const useExecutionStore = create<ExecutionStore>((set) => ({
         ),
       },
     })),
+  updateStepResult: (stepNum, result) =>
+    set((state) => {
+      const steps = state.context.steps.map((s) =>
+        s.step === stepNum ? { ...s, ...result } : s
+      );
+      const passed = steps.filter((s) => s.status === 'passed').length;
+      return {
+        context: {
+          ...state.context,
+          steps,
+          stats: {
+            ...state.context.stats,
+            progress: {
+              percent: steps.length ? (passed / steps.length) * 100 : 0,
+              detail: `${passed}/${steps.length}`,
+            },
+            passRate: {
+              rate: steps.length ? `${Math.round((passed / steps.length) * 100)}%` : '0%',
+              detail: `${passed}/${steps.length}`,
+            },
+            steps: { total: steps.length, completed: passed },
+          },
+        },
+      };
+    }),
   addLog: (log) =>
     set((state) => ({
       context: {
