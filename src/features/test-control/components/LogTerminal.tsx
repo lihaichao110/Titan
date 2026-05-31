@@ -80,21 +80,29 @@ export function LogTerminal({ height = "h-[640px]" }: { height?: string }) {
       {/* Log entries - smaller font, tighter spacing */}
       <ScrollArea className="flex-1 min-w-0">
         <div className="min-w-0 font-mono text-xs p-4 space-y-2">
-          {filteredLogs.map((log, index) => (
-            <div key={index} className="flex min-w-0 items-start gap-3">
-              <span className="text-[#9CA3AF] w-16 flex-shrink-0">
-                {log.time}
-              </span>
-              <span
-                className={`px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0 ${levelColors[log.level]}`}
-              >
-                {log.level}
-              </span>
-              <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[#374151]">
-                {log.msg}
+          {filteredLogs.length === 0 ? (
+            <div className="min-h-[140px] flex items-center justify-center px-4 text-center font-sans">
+              <span className="text-sm text-[#9CA3AF]">
+                点击执行后显示实时日志
               </span>
             </div>
-          ))}
+          ) : (
+            filteredLogs.map((log, index) => (
+              <div key={index} className="flex min-w-0 items-start gap-3">
+                <span className="text-[#9CA3AF] w-16 flex-shrink-0">
+                  {log.time}
+                </span>
+                <span
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0 ${levelColors[log.level]}`}
+                >
+                  {log.level}
+                </span>
+                <span className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[#374151]">
+                  {log.msg}
+                </span>
+              </div>
+            ))
+          )}
           <div ref={bottomRef} />
         </div>
       </ScrollArea>

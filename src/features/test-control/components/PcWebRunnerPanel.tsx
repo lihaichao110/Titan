@@ -50,30 +50,31 @@ const PC_BROWSER_VIEWPORT = {
   height: 900,
 };
 
+// 这 4 步顺序与后端 PC Web 执行事件严格对应，清理时不要合并或重排。
 const defaultSteps: PcWebStep[] = [
   {
     step: 1,
-    name: "等待百度首页加载",
+    name: "加载登录页",
     kind: "assert",
-    instruction: "百度首页已经加载完成，页面上能看到搜索框",
+    instruction: "CodeVortex 登录页已经加载完成，页面上能看到用户名和密码输入框",
   },
   {
     step: 2,
-    name: "搜索今日新闻",
+    name: "输入账号密码",
     kind: "act",
-    instruction: "在百度搜索框输入“今日新闻”，并提交搜索",
+    instruction: "在登录页输入测试账号 test_user 和测试密码 test_password",
   },
   {
     step: 3,
-    name: "验证搜索结果",
-    kind: "assert",
-    instruction: "搜索结果页已经加载完成，页面上能看到与“今日新闻”相关的结果列表",
+    name: "点击登录",
+    kind: "act",
+    instruction: "点击登录按钮提交表单",
   },
   {
     step: 4,
-    name: "查看第一条新闻",
-    kind: "act",
-    instruction: "点击搜索结果中的第一条新闻或资讯结果，并确认已经进入新闻详情页或新闻来源页面",
+    name: "验证进入后台首页",
+    kind: "assert",
+    instruction: "登录后已经进入 CodeVortex 后台首页",
   },
 ];
 
@@ -102,20 +103,20 @@ export function PcWebRunnerPanel() {
   const {
     setScreenshot,
     setExecutionSteps,
-    updateStepStatus,
     updateStepResult,
     addLog,
     clearLogs,
   } = useExecutionStore();
-  const [url, setUrl] = useState("https://www.baidu.com");
+  const [url, setUrl] = useState("https://intra.lihaichao.cn/login");
   const [running, setRunning] = useState(false);
-  const [statusText, setStatusText] = useState("等待执行 PC Web 测试");
   const [errorText, setErrorText] = useState<string | null>(null);
   const [browserReady, setBrowserReady] = useState(false);
   const [browserError, setBrowserError] = useState<string | null>(null);
   const browserHostRef = useRef<HTMLDivElement | null>(null);
   const initialUrlRef = useRef(url);
   const animationFrameRef = useRef<number | null>(null);
+  // 命令直接失败时才兜底标失败，避免已有 step 事件后覆盖真实执行状态。
+  const hasStepEventRef = useRef(false);
   const executionSteps = useMemo(() => toExecutionSteps(defaultSteps), []);
 
   const getBrowserBounds = useCallback((): BrowserBounds | null => {
@@ -144,8 +145,8 @@ export function PcWebRunnerPanel() {
     };
   }, []);
 
-  const syncBrowserBounds = useCallback(async () => {
-    const bounds = getBrowserBounds();
+  const syncBrowserBounds = useCallback(async (nextBounds?: BrowserBounds) => {
+    const bounds = nextBounds ?? getBrowserBounds();
     if (!bounds) return;
 
     try {
@@ -168,15 +169,18 @@ export function PcWebRunnerPanel() {
   }, [syncBrowserBounds]);
 
   useEffect(() => {
+    let disposed = false;
     let unlisten: (() => void) | undefined;
 
-    listen<PcWebRunnerEvent>("pc-web-runner-event", ({ payload }) => {
+    void listen<PcWebRunnerEvent>("pc-web-runner-event", ({ payload }) => {
       if (payload.event === "log") {
         addLog(payload.payload);
         return;
       }
 
       if (payload.event === "step") {
+        // StepListView 的步骤状态只由后端 step 事件推进，不要改成最终结果批量回写。
+        hasStepEventRef.current = true;
         updateStepResult(payload.payload.step, payload.payload);
         return;
       }
@@ -186,23 +190,33 @@ export function PcWebRunnerPanel() {
         return;
       }
 
-      setStatusText(payload.payload.success ? "PC Web 测试执行完成" : "PC Web 测试执行失败");
       setErrorText(payload.payload.success ? null : payload.payload.error || "测试执行失败");
       if (payload.payload.screenshot) {
         setScreenshot(payload.payload.screenshot);
       }
     }).then((handler) => {
+      if (disposed) {
+        handler();
+        return;
+      }
+
       unlisten = handler;
     });
 
     return () => {
+      disposed = true;
       unlisten?.();
     };
   }, [addLog, setScreenshot, updateStepResult]);
 
   useEffect(() => {
+    setExecutionSteps(executionSteps);
+  }, [executionSteps, setExecutionSteps]);
+
+  useEffect(() => {
     let disposed = false;
     let retryTimeout: number | null = null;
+
     const createBrowser = async () => {
       const bounds = getBrowserBounds();
       if (!bounds) {
@@ -212,6 +226,8 @@ export function PcWebRunnerPanel() {
 
       try {
         await invoke("create_pc_browser", { url: initialUrlRef.current, bounds });
+        await invoke("show_pc_browser");
+        await syncBrowserBounds(bounds);
         if (!disposed) {
           setBrowserReady(true);
           setBrowserError(null);
@@ -247,30 +263,39 @@ export function PcWebRunnerPanel() {
       }
       void invoke("hide_pc_browser");
     };
-  }, [getBrowserBounds, scheduleSyncBrowserBounds]);
+  }, [getBrowserBounds, scheduleSyncBrowserBounds, syncBrowserBounds]);
 
   const navigateBrowser = async (targetUrl: string) => {
     const normalizedUrl = normalizeUrl(targetUrl);
     if (!normalizedUrl) {
-      setBrowserError("请输入有效的 URL");
-      return null;
+      const message = "请输入有效的 URL";
+      setBrowserError(message);
+      throw new Error(message);
     }
 
     const bounds = getBrowserBounds();
+    if (!browserReady && !bounds) {
+      const message = "浏览器容器未准备好";
+      setBrowserError(message);
+      throw new Error(message);
+    }
+
     try {
       if (browserReady) {
         await invoke("navigate_pc_browser", { url: normalizedUrl });
+        await invoke("show_pc_browser");
       } else if (bounds) {
         await invoke("create_pc_browser", { url: normalizedUrl, bounds });
+        await invoke("show_pc_browser");
         setBrowserReady(true);
       }
-      await syncBrowserBounds();
+      await syncBrowserBounds(bounds ?? undefined);
       setBrowserError(null);
       return normalizedUrl;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setBrowserError(message);
-      return null;
+      throw new Error(message);
     }
   };
 
@@ -278,25 +303,25 @@ export function PcWebRunnerPanel() {
     const targetUrl = normalizeUrl(url);
     if (!targetUrl) {
       setErrorText("请输入有效的 URL");
-      setStatusText("URL 无效");
       return;
     }
 
-    await navigateBrowser(targetUrl);
     setRunning(true);
     setErrorText(null);
-    setStatusText("正在启动浏览器...");
     clearLogs();
     setScreenshot("");
     setExecutionSteps(executionSteps);
-    updateStepStatus(defaultSteps[0].step, "executing");
-    addLog({
-      time: new Date().toTimeString().slice(0, 8),
-      level: "INFO",
-      msg: `开始执行 PC Web 测试: ${targetUrl}`,
-    });
+    hasStepEventRef.current = false;
 
     try {
+      await navigateBrowser(targetUrl);
+
+      addLog({
+        time: new Date().toTimeString().slice(0, 8),
+        level: "INFO",
+        msg: `开始执行 PC Web 测试: ${targetUrl}`,
+      });
+
       const result = await invoke<PcWebRunResult>("run_pc_web_test", {
         request: {
           url: targetUrl,
@@ -304,32 +329,25 @@ export function PcWebRunnerPanel() {
         },
       });
 
-      result.steps.forEach((step) => {
-        updateStepResult(step.step, {
-          status: step.status,
-          duration: step.duration,
-          detail: step.detail,
-        });
-      });
+      // 不要在这里批量回写 result.steps，否则 4 个步骤会看起来一次性完成。
       if (result.screenshot) {
         setScreenshot(result.screenshot);
       }
-      setStatusText(result.success ? "PC Web 测试执行完成" : "PC Web 测试执行失败");
       setErrorText(result.success ? null : result.error || "测试执行失败");
-      await navigateBrowser(targetUrl);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      updateStepResult(defaultSteps[0].step, {
-        status: "failed",
-        duration: "00:00:00",
-        detail: message,
-      });
+      if (!hasStepEventRef.current) {
+        updateStepResult(defaultSteps[0].step, {
+          status: "failed",
+          duration: "00:00:00",
+          detail: message,
+        });
+      }
       addLog({
         time: new Date().toTimeString().slice(0, 8),
         level: "ERROR",
         msg: message,
       });
-      setStatusText("PC Web 测试执行失败");
       setErrorText(message);
     } finally {
       setRunning(false);
@@ -362,11 +380,8 @@ export function PcWebRunnerPanel() {
             onChange={(event) => setUrl(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
-                void navigateBrowser(url);
+                void runTest();
               }
-            }}
-            onBlur={() => {
-              void navigateBrowser(url);
             }}
             placeholder="https://www.baidu.com"
             className="h-9 bg-white"
@@ -380,9 +395,6 @@ export function PcWebRunnerPanel() {
             <Play className="w-4 h-4 mr-1.5" />
             执行
           </Button>
-        </div>
-        <div className={`mt-2 text-xs ${errorText || browserError ? "text-[#EF4444]" : "text-[#6B7280]"}`}>
-          {errorText || browserError || statusText}
         </div>
       </div>
 

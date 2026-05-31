@@ -54,7 +54,7 @@ function formatDuration(startedAt) {
 
 async function launchBrowser() {
   try {
-    return await chromium.launch({ headless: true });
+    return await chromium.launch({ headless: false });
   } catch (error) {
     const message = error?.message || String(error);
     throw new Error(
@@ -65,8 +65,16 @@ async function launchBrowser() {
   }
 }
 
+function isBaiduHomeAssertStep(step) {
+  return step.kind === 'assert' && step.instruction.includes('百度首页') && step.instruction.includes('搜索框');
+}
+
 function isBaiduSearchStep(step) {
   return step.kind !== 'assert' && step.instruction.includes('百度搜索框') && step.instruction.includes('今日新闻');
+}
+
+function isBaiduSearchResultAssertStep(step) {
+  return step.kind === 'assert' && step.instruction.includes('搜索结果') && step.instruction.includes('今日新闻');
 }
 
 function isBaiduOpenFirstNewsStep(step) {
@@ -118,6 +126,26 @@ async function runBaiduSearch(page) {
   await assertNoBaiduCaptcha(page);
 }
 
+async function assertBaiduHomeReady(page) {
+  await waitForPageReady(page);
+  await assertNoBaiduCaptcha(page);
+  await findVisibleBaiduSearchInput(page);
+}
+
+async function assertBaiduSearchResultsReady(page) {
+  await waitForPageReady(page);
+  await assertNoBaiduCaptcha(page);
+  await page.waitForURL(/baidu\.com\/s|wd=%E4%BB%8A%E6%97%A5%E6%96%B0%E9%97%BB/, { timeout: 15000 }).catch(() => {});
+  await findVisibleBaiduSearchInput(page);
+
+  const results = page.locator(
+    '#content_left .result, #content_left .c-container, #content_left h3 a'
+  );
+  if ((await results.count()) === 0) {
+    throw new Error('未找到“今日新闻”相关搜索结果列表');
+  }
+}
+
 async function openFirstBaiduNewsResult(page, browser) {
   await assertNoBaiduCaptcha(page);
   const firstResultLink = page.locator(
@@ -130,6 +158,7 @@ async function openFirstBaiduNewsResult(page, browser) {
   const popup = await popupPromise;
   const targetPage = popup || page;
   await waitForPageReady(targetPage);
+  await assertNoBaiduCaptcha(targetPage);
 
   if (popup) {
     const pages = browser.contexts().flatMap((context) => context.pages());
@@ -187,7 +216,7 @@ async function run() {
   };
 
   try {
-    emitLog(logs, 'INFO', `打开页面: ${url}`);
+    emitLog(logs, 'INFO', `启动可见 Playwright 浏览器: ${url}`);
     browser = await launchBrowser();
     let page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -205,8 +234,12 @@ async function run() {
       await captureAndEmitScreenshot(page);
 
       try {
-        if (isBaiduSearchStep(step)) {
+        if (isBaiduHomeAssertStep(step)) {
+          await assertBaiduHomeReady(page);
+        } else if (isBaiduSearchStep(step)) {
           await runBaiduSearch(page);
+        } else if (isBaiduSearchResultAssertStep(step)) {
+          await assertBaiduSearchResultsReady(page);
         } else if (isBaiduOpenFirstNewsStep(step)) {
           page = await openFirstBaiduNewsResult(page, browser);
         } else {

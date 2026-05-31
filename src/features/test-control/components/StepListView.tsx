@@ -60,58 +60,68 @@ export function StepListView({ height = "h-[640px]" }: Props) {
       {/* Step list */}
       <ScrollArea className="flex-1 min-w-0">
         <div className="relative min-w-0 p-4">
-          {/* Single vertical connecting line - behind items */}
-          <div className="absolute left-11 top-6 bottom-6 w-0.5 bg-[#E5E7EB]" />
+          {steps.length === 0 ? (
+            <div className="h-full min-h-[180px] flex items-center justify-center px-4 text-center">
+              <span className="text-sm text-[#9CA3AF]">
+                暂无待执行步骤
+              </span>
+            </div>
+          ) : (
+            <>
+              {/* Single vertical connecting line - behind items */}
+              <div className="absolute left-11 top-6 bottom-6 w-0.5 bg-[#E5E7EB]" />
 
-          {steps.map((step) => {
-            const config = statusConfig[step.status];
-            const Icon = config.icon;
-            const isExecuting = step.status === "executing";
-            const isPassed = step.status === "passed";
+              {steps.map((step) => {
+                const config = statusConfig[step.status];
+                const Icon = config.icon;
+                const isExecuting = step.status === "executing";
+                const isPassed = step.status === "passed";
 
-            return (
-              <div
-                key={step.step}
-                className={`relative flex min-w-0 items-center mb-5 last:mb-0 pl-4 ${isExecuting ? "py-3 border border-[#2563EB] rounded-lg bg-[#EFF6FF]" : ""}`}
-              >
-                {/* Node circle - centered on the vertical line */}
-                <div
-                  className={`shrink-0 w-6 h-6 rounded-full ${config.bgColor} border-2 ${config.borderColor} flex items-center justify-center z-10`}
-                >
-                  {isPassed ? (
-                    <Icon className="w-3 h-3 text-[#16A34A]" />
-                  ) : isExecuting ? (
-                    <Icon className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <span className={`text-xs font-medium ${config.textColor}`}>
-                      {step.step}
-                    </span>
-                  )}
-                </div>
-
-                {/* Content row */}
-                <div className={`flex-1 min-w-0 ml-4 pr-4`}>
-                  <div className="flex min-w-0 items-center justify-between gap-3">
-                    <span
-                      className={`min-w-0 break-words text-sm font-medium ${isExecuting ? "text-[#2563EB]" : "text-[#1F2937]"}`}
+                return (
+                  <div
+                    key={step.step}
+                    className={`relative flex min-w-0 items-center mb-5 last:mb-0 pl-4 ${isExecuting ? "py-3 border border-[#2563EB] rounded-lg bg-[#EFF6FF]" : ""}`}
+                  >
+                    {/* Node circle - centered on the vertical line */}
+                    <div
+                      className={`shrink-0 w-6 h-6 rounded-full ${config.bgColor} border-2 ${config.borderColor} flex items-center justify-center z-10`}
                     >
-                      {step.name}
-                    </span>
-                    {step.duration && (
-                      <span className="text-xs font-mono text-[#6B7280] shrink-0">
-                        {step.duration}
-                      </span>
-                    )}
-                  </div>
-                  {step.locator && (
-                    <div className="min-w-0 break-words text-xs text-[#6B7280] mt-0.5">
-                      {step.locator}
+                      {isPassed ? (
+                        <Icon className="w-3 h-3 text-[#16A34A]" />
+                      ) : isExecuting ? (
+                        <Icon className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <span className={`text-xs font-medium ${config.textColor}`}>
+                          {step.step}
+                        </span>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+
+                    {/* Content row */}
+                    <div className={`flex-1 min-w-0 ml-4 pr-4`}>
+                      <div className="flex min-w-0 items-center justify-between gap-3">
+                        <span
+                          className={`min-w-0 break-words text-sm font-medium ${isExecuting ? "text-[#2563EB]" : "text-[#1F2937]"}`}
+                        >
+                          {step.name}
+                        </span>
+                        {step.duration && (
+                          <span className="text-xs font-mono text-[#6B7280] shrink-0">
+                            {step.duration}
+                          </span>
+                        )}
+                      </div>
+                      {step.locator && (
+                        <div className="min-w-0 break-words text-xs text-[#6B7280] mt-0.5">
+                          {step.locator}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
         </div>
       </ScrollArea>
     </div>
