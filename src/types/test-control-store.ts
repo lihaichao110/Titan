@@ -1,5 +1,5 @@
 import type { StateCreator } from "zustand";
-import type { ExecutionContext, ExecutionStep, LogEntry, LogLevel } from "@/types";
+import type { ExecutionContext, ExecutionStep, LogEntry, LogLevel } from "./test-control";
 
 export type DeviceType = "mobile" | "pc";
 

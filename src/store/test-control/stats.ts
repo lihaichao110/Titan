@@ -1,6 +1,4 @@
-import type { ExecutionStep, StatsData } from "@/types";
-
-type StepStats = Pick<StatsData, "progress" | "passRate" | "steps">;
+import type { ExecutionStep, StepStats } from "@/types/test-control";
 
 // 根据步骤状态生成统计卡片数据，避免多个 action 各自重复计算。
 export function createStepStats(steps: ExecutionStep[]): StepStats {

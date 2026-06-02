@@ -1,5 +1,5 @@
-import type { ExecutionContext, ExecutionStep, LogEntry } from "@/types";
-import type { DeviceState, LogState, UiState } from "./types";
+import type { ExecutionContext, ExecutionStep, LogEntry } from "@/types/test-control";
+import type { DeviceState, LogState, UiState } from "@/types/test-control-store";
 
 const initialSteps: ExecutionStep[] = [];
 const initialLogs: LogEntry[] = [];

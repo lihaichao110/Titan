@@ -8,14 +8,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
-import { Task, TaskStatus, TaskType } from "../types";
+import type { TaskListProps, TaskStatus, TaskType } from "@/types/tasks";
 import { cn } from "@/lib/utils";
-
-interface TaskListProps {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
-  tasks: Task[];
-}
 
 const tabs = [
   { value: "all", label: "全部任务" },

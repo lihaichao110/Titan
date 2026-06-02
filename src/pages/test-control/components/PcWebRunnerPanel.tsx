@@ -5,45 +5,13 @@ import { Globe2, Play, RotateCw } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { useExecutionStore } from "@/store/test-control";
-import type { ExecutionStep, LogEntry, StepStatus } from "../../../types";
-
-type PcWebStepKind = "act" | "assert";
-
-interface PcWebStep {
-  step: number;
-  name: string;
-  kind: PcWebStepKind;
-  instruction: string;
-}
-
-interface PcWebStepResult {
-  step: number;
-  status: StepStatus;
-  duration: string;
-  detail: string;
-}
-
-interface PcWebRunResult {
-  success: boolean;
-  steps: PcWebStepResult[];
-  logs: LogEntry[];
-  screenshot?: string | null;
-  error?: string | null;
-}
-
-interface BrowserBounds {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  zoom: number;
-}
-
-type PcWebRunnerEvent =
-  | { event: "log"; payload: LogEntry }
-  | { event: "step"; payload: Partial<PcWebStepResult> & { step: number } }
-  | { event: "screenshot"; payload: { screenshot: string } }
-  | { event: "result"; payload: PcWebRunResult };
+import type {
+  BrowserBounds,
+  ExecutionStep,
+  PcWebRunResult,
+  PcWebRunnerEvent,
+  PcWebStep,
+} from "@/types/test-control";
 
 const PC_BROWSER_VIEWPORT = {
   width: 1440,

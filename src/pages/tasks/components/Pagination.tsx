@@ -1,11 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/button';
-
-interface PaginationProps {
-  currentPage: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
-}
+import type { PaginationProps } from "@/types/tasks";
 
 export function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
   const pages = generatePages(currentPage, totalPages);

@@ -1,5 +1,5 @@
 import { initialDeviceState } from "./initialState";
-import type { DeviceActions, DeviceState, StoreSlice } from "./types";
+import type { DeviceActions, DeviceState, StoreSlice } from "@/types/test-control-store";
 
 // 设备 slice 只保存 UI 所需的设备选择、端类型和最新截图。
 export const createDeviceSlice: StoreSlice<DeviceState & DeviceActions> = (set) => ({

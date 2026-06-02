@@ -1,6 +1,6 @@
 import { initialExecutionContext } from "./initialState";
 import { createStepStats } from "./stats";
-import type { ExecutionActions, ExecutionState, StoreSlice } from "./types";
+import type { ExecutionActions, ExecutionState, StoreSlice } from "@/types/test-control-store";
 
 // 执行 slice 管理任务上下文中会随运行变化的部分：步骤、结果和运行时长。
 export const createExecutionSlice: StoreSlice<ExecutionState & ExecutionActions> = (set) => ({

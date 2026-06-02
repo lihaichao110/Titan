@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/scroll-area";
 import { Label } from "@/components/label";
 import { Trash2 } from "lucide-react";
 import { useExecutionStore } from "@/store/test-control";
-import type { LogLevel } from "../../../types";
+import type { LogLevel, LogTerminalProps } from "@/types/test-control";
 
 const levelColors: Record<LogLevel, string> = {
   INFO: "bg-blue-100 text-[#2563FF]",
@@ -20,7 +20,7 @@ const levelColors: Record<LogLevel, string> = {
   ERROR: "bg-red-100 text-[#EF4444]",
 };
 
-export function LogTerminal({ height = "h-[640px]" }: { height?: string }) {
+export function LogTerminal({ height = "h-[640px]" }: LogTerminalProps) {
   const {
     context,
     logFilter,

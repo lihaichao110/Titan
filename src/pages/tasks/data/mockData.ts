@@ -1,4 +1,4 @@
-import { Task, StatsCardData } from '../types';
+import type { StatsCardData, Task } from "@/types/tasks";
 
 export const statsCardsData: StatsCardData[] = [
   {

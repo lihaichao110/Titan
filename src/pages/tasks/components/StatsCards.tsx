@@ -1,9 +1,5 @@
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { StatsCardData } from '../types';
-
-interface StatsCardsProps {
-  data: StatsCardData[];
-}
+import type { StatsCardData, StatsCardsProps } from "@/types/tasks";
 
 const colorStyles = {
   blue: {

@@ -10,20 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/select";
-
-interface IOSDevice {
-  udid: string;
-  name: string;
-}
-
-interface ScreenStreamInfo {
-  sessionUrl: string;
-  streamUrl: string;
-  udid: string;
-  mjpegPort: number;
-}
-
-type StreamStatus = "idle" | "connecting" | "connected" | "fallback" | "error";
+import type { IOSDevice, ScreenStreamInfo, StreamStatus } from "@/types/test-control";
 
 export function DeviceSimulator() {
   const {

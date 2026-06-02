@@ -1,5 +1,5 @@
 import { initialLogState } from "./initialState";
-import type { LogActions, LogState, StoreSlice } from "./types";
+import type { LogActions, LogState, StoreSlice } from "@/types/test-control-store";
 
 // 日志 slice 管理日志终端的筛选/滚动状态，以及 context.logs 的写入。
 export const createLogSlice: StoreSlice<LogState & LogActions> = (set) => ({

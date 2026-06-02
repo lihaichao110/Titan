@@ -3,7 +3,7 @@ import { createDeviceSlice } from "./deviceSlice";
 import { createExecutionSlice } from "./executionSlice";
 import { createLogSlice } from "./logSlice";
 import { createUiSlice } from "./uiSlice";
-import type { ExecutionStore } from "./types";
+import type { ExecutionStore } from "@/types/test-control-store";
 
 // 统一组装测试控制台 store。组件只从这个入口导入，避免依赖具体 slice 文件。
 export const useExecutionStore = create<ExecutionStore>()((...storeApi) => ({

@@ -1,6 +1,7 @@
 import { ScrollArea } from "@/components/scroll-area";
 import { useExecutionStore } from "@/store/test-control";
 import { CheckCircle2, Circle, Loader2 } from "lucide-react";
+import type { StepListViewProps } from "@/types/test-control";
 
 const statusConfig = {
   passed: {
@@ -33,11 +34,7 @@ const statusConfig = {
   },
 };
 
-interface Props {
-  height?: string;
-}
-
-export function StepListView({ height = "h-[640px]" }: Props) {
+export function StepListView({ height = "h-[640px]" }: StepListViewProps) {
   const { context } = useExecutionStore();
   const { steps } = context;
 
