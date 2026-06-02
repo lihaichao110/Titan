@@ -66,12 +66,12 @@ Expected: 交互式选择配置，使用默认值或以下配置：
 
 Run: `npx shadcn@latest add button badge scroll-area separator select switch progress tooltip`
 
-Expected: 在 `src/components/ui/` 下生成组件文件
+Expected: 在 `src/components/` 下生成组件文件
 
 - [ ] **Step 4: 提交**
 
 ```bash
-git add package.json pnpm-lock.yaml components.json src/components/ui/
+git add package.json pnpm-lock.yaml components.json src/components/
 git commit -m "feat: setup shadcn/ui and zustand dependencies"
 ```
 
@@ -415,8 +415,8 @@ git commit -m "feat: add Sidebar component"
 Create `src/features/test-control/components/HeaderToolbar.tsx`:
 
 ```tsx
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/button';
+import { Badge } from '@/components/badge';
 import { useExecutionStore } from '../store/executionStore';
 
 export function HeaderToolbar() {
@@ -486,8 +486,8 @@ git commit -m "feat: add HeaderToolbar component"
 Create `src/features/test-control/components/DeviceSimulator.tsx`:
 
 ```tsx
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/button';
+import { Separator } from '@/components/separator';
 import { ZoomIn, ZoomOut, RotateCcw, Camera, Smartphone } from 'lucide-react';
 
 export function DeviceSimulator() {
@@ -595,8 +595,8 @@ git commit -m "feat: add DeviceSimulator component"
 Create `src/features/test-control/components/StepListView.tsx`:
 
 ```tsx
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/badge';
+import { ScrollArea } from '@/components/scroll-area';
 import { useExecutionStore } from '../store/executionStore';
 import { CheckCircle2, Circle, Loader2 } from 'lucide-react';
 
@@ -723,12 +723,12 @@ Create `src/features/test-control/components/LogTerminal.tsx`:
 
 ```tsx
 import { useEffect, useRef } from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/select';
+import { Switch } from '@/components/switch';
+import { ScrollArea } from '@/components/scroll-area';
 import { useExecutionStore } from '../store/executionStore';
 import type { LogLevel } from '../types';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/label';
 
 const levelColors: Record<LogLevel, string> = {
   INFO: 'text-blue-500',
@@ -823,7 +823,7 @@ git commit -m "feat: add LogTerminal component"
 Create `src/features/test-control/components/StatsGrid.tsx`:
 
 ```tsx
-import { Progress } from '@/components/ui/progress';
+import { Progress } from '@/components/progress';
 import { useExecutionStore } from '../store/executionStore';
 
 export function StatsGrid() {

@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/button";
 import { RefreshCw, Smartphone, Usb } from "lucide-react";
-import { useExecutionStore } from "../store/executionStore";
+import { useExecutionStore } from "@/store/test-control";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/select";
 
 interface IOSDevice {
   udid: string;

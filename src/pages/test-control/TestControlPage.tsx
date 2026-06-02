@@ -1,10 +1,10 @@
-import { HeaderToolbar } from "@/features/test-control/components/HeaderToolbar";
-import { DeviceSimulator } from "@/features/test-control/components/DeviceSimulator";
-import { PcWebRunnerPanel } from "@/features/test-control/components/PcWebRunnerPanel";
-import { StepListView } from "@/features/test-control/components/StepListView";
-import { LogTerminal } from "@/features/test-control/components/LogTerminal";
-import { StatsGrid } from "@/features/test-control/components/StatsGrid";
-import { useExecutionStore } from "@/features/test-control/store/executionStore";
+import { HeaderToolbar } from "@/pages/test-control/components/HeaderToolbar";
+import { DeviceSimulator } from "@/pages/test-control/components/DeviceSimulator";
+import { PcWebRunnerPanel } from "@/pages/test-control/components/PcWebRunnerPanel";
+import { StepListView } from "@/pages/test-control/components/StepListView";
+import { LogTerminal } from "@/pages/test-control/components/LogTerminal";
+import { StatsGrid } from "@/pages/test-control/components/StatsGrid";
+import { useExecutionStore } from "@/store/test-control";
 
 export function TestControlPage() {
   const { deviceType } = useExecutionStore();

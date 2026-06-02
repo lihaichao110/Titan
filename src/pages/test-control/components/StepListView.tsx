@@ -1,5 +1,5 @@
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useExecutionStore } from "../store/executionStore";
+import { ScrollArea } from "@/components/scroll-area";
+import { useExecutionStore } from "@/store/test-control";
 import { CheckCircle2, Circle, Loader2 } from "lucide-react";
 
 const statusConfig = {

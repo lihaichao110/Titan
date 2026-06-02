@@ -1,13 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import { Play, Pencil, MoreHorizontal, Star } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/button";
+import { Checkbox } from "@/components/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/dropdown-menu";
 import { Task, TaskStatus, TaskType } from "../types";
 import { cn } from "@/lib/utils";
 

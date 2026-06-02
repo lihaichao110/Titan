@@ -1,5 +1,5 @@
-import { Button } from '@/components/ui/button';
-import { useExecutionStore } from '../store/executionStore';
+import { Button } from '@/components/button';
+import { useExecutionStore } from "@/store/test-control";
 import { Square, Pause, RotateCw, Smartphone, Monitor } from 'lucide-react';
 import {
   Select,
@@ -7,7 +7,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/select';
 
 export function HeaderToolbar() {
   const { context, deviceType, setDeviceType } = useExecutionStore();

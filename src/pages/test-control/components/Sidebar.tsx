@@ -9,7 +9,7 @@ import {
   Folder,
   Settings,
 } from "lucide-react";
-import { useExecutionStore } from "../store/executionStore";
+import { useExecutionStore } from "@/store/test-control";
 
 const iconMap: Record<string, typeof PlaySquare> = {
   PlaySquare,

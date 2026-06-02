@@ -1,5 +1,5 @@
-import { Progress } from '@/components/ui/progress';
-import { useExecutionStore } from '../store/executionStore';
+import { Progress } from '@/components/progress';
+import { useExecutionStore } from "@/store/test-control";
 
 export function StatsGrid() {
   const { context } = useExecutionStore();
@@ -33,7 +33,7 @@ export function StatsGrid() {
       <div className="h-[140px] bg-white rounded-2xl shadow-[0_1px_2px_rgba(0,0,0,.04)] border border-[#E5E7EB] p-5">
         <div className="text-xs text-[#6B7280] mb-3">运行时长</div>
         <div className="text-[36px] font-bold text-[#1F2937] leading-none">{stats.runtime.time}</div>
-        <div className="text-xs text-[#9CA3AF] mt-3">{stats.runtime.device}</div>
+        <div className="text-xs text-[#9CA3AF] mt-3">PC Web 自动化</div>
       </div>
     </div>
   );

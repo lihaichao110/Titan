@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Globe2, Play, RotateCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useExecutionStore } from "../store/executionStore";
-import type { ExecutionStep, LogEntry, StepStatus } from "../types";
+import { Button } from "@/components/button";
+import { Input } from "@/components/input";
+import { useExecutionStore } from "@/store/test-control";
+import type { ExecutionStep, LogEntry, StepStatus } from "../../../types";
 
 type PcWebStepKind = "act" | "assert";
 
@@ -56,7 +56,8 @@ const defaultSteps: PcWebStep[] = [
     step: 1,
     name: "加载登录页",
     kind: "assert",
-    instruction: "CodeVortex 登录页已经加载完成，页面上能看到用户名和密码输入框",
+    instruction:
+      "CodeVortex 登录页已经加载完成，页面上能看到用户名和密码输入框",
   },
   {
     step: 2,
@@ -91,7 +92,9 @@ function toExecutionSteps(steps: PcWebStep[]): ExecutionStep[] {
 function normalizeUrl(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return null;
-  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  const withProtocol = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`;
   try {
     return new URL(withProtocol).toString();
   } catch {
@@ -99,10 +102,22 @@ function normalizeUrl(value: string) {
   }
 }
 
+function formatRuntimeTime(elapsedMs: number) {
+  const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return [hours, minutes, seconds]
+    .map((value) => String(value).padStart(2, "0"))
+    .join(":");
+}
+
 export function PcWebRunnerPanel() {
   const {
     setScreenshot,
     setExecutionSteps,
+    setRuntimeTime,
     updateStepResult,
     addLog,
     clearLogs,
@@ -115,6 +130,7 @@ export function PcWebRunnerPanel() {
   const browserHostRef = useRef<HTMLDivElement | null>(null);
   const initialUrlRef = useRef(url);
   const animationFrameRef = useRef<number | null>(null);
+  const runtimeIntervalRef = useRef<number | null>(null);
   // 命令直接失败时才兜底标失败，避免已有 step 事件后覆盖真实执行状态。
   const hasStepEventRef = useRef(false);
   const executionSteps = useMemo(() => toExecutionSteps(defaultSteps), []);
@@ -145,17 +161,20 @@ export function PcWebRunnerPanel() {
     };
   }, []);
 
-  const syncBrowserBounds = useCallback(async (nextBounds?: BrowserBounds) => {
-    const bounds = nextBounds ?? getBrowserBounds();
-    if (!bounds) return;
+  const syncBrowserBounds = useCallback(
+    async (nextBounds?: BrowserBounds) => {
+      const bounds = nextBounds ?? getBrowserBounds();
+      if (!bounds) return;
 
-    try {
-      await invoke("set_pc_browser_bounds", { bounds });
-      setBrowserError(null);
-    } catch (error) {
-      setBrowserError(error instanceof Error ? error.message : String(error));
-    }
-  }, [getBrowserBounds]);
+      try {
+        await invoke("set_pc_browser_bounds", { bounds });
+        setBrowserError(null);
+      } catch (error) {
+        setBrowserError(error instanceof Error ? error.message : String(error));
+      }
+    },
+    [getBrowserBounds],
+  );
 
   const scheduleSyncBrowserBounds = useCallback(() => {
     if (animationFrameRef.current !== null) {
@@ -190,7 +209,11 @@ export function PcWebRunnerPanel() {
         return;
       }
 
-      setErrorText(payload.payload.success ? null : payload.payload.error || "测试执行失败");
+      setErrorText(
+        payload.payload.success
+          ? null
+          : payload.payload.error || "测试执行失败",
+      );
       if (payload.payload.screenshot) {
         setScreenshot(payload.payload.screenshot);
       }
@@ -225,7 +248,10 @@ export function PcWebRunnerPanel() {
       }
 
       try {
-        await invoke("create_pc_browser", { url: initialUrlRef.current, bounds });
+        await invoke("create_pc_browser", {
+          url: initialUrlRef.current,
+          bounds,
+        });
         await invoke("show_pc_browser");
         await syncBrowserBounds(bounds);
         if (!disposed) {
@@ -235,7 +261,9 @@ export function PcWebRunnerPanel() {
       } catch (error) {
         if (!disposed) {
           setBrowserReady(false);
-          setBrowserError(error instanceof Error ? error.message : String(error));
+          setBrowserError(
+            error instanceof Error ? error.message : String(error),
+          );
         }
       }
     };
@@ -260,6 +288,10 @@ export function PcWebRunnerPanel() {
       if (animationFrameRef.current !== null) {
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
+      }
+      if (runtimeIntervalRef.current !== null) {
+        window.clearInterval(runtimeIntervalRef.current);
+        runtimeIntervalRef.current = null;
       }
       void invoke("hide_pc_browser");
     };
@@ -308,10 +340,18 @@ export function PcWebRunnerPanel() {
 
     setRunning(true);
     setErrorText(null);
+    setRuntimeTime("00:00:00");
     clearLogs();
     setScreenshot("");
     setExecutionSteps(executionSteps);
     hasStepEventRef.current = false;
+    const runtimeStartedAt = Date.now();
+    if (runtimeIntervalRef.current !== null) {
+      window.clearInterval(runtimeIntervalRef.current);
+    }
+    runtimeIntervalRef.current = window.setInterval(() => {
+      setRuntimeTime(formatRuntimeTime(Date.now() - runtimeStartedAt));
+    }, 1000);
 
     try {
       await navigateBrowser(targetUrl);
@@ -350,6 +390,11 @@ export function PcWebRunnerPanel() {
       });
       setErrorText(message);
     } finally {
+      if (runtimeIntervalRef.current !== null) {
+        window.clearInterval(runtimeIntervalRef.current);
+        runtimeIntervalRef.current = null;
+      }
+      setRuntimeTime(formatRuntimeTime(Date.now() - runtimeStartedAt));
       setRunning(false);
     }
   };
@@ -359,8 +404,12 @@ export function PcWebRunnerPanel() {
       <div className="h-14 px-6 flex items-center justify-between border-b border-[#E5E7EB]">
         <div className="flex items-center gap-3">
           <Globe2 className="w-4 h-4 text-[#6B7280]" />
-          <span className="text-sm font-medium text-[#1F2937]">PC Web 自动化</span>
-          <div className={`w-2 h-2 rounded-full ${running ? "bg-blue-500" : errorText ? "bg-red-500" : "bg-green-500"}`} />
+          <span className="text-sm font-medium text-[#1F2937]">
+            PC Web 自动化
+          </span>
+          <div
+            className={`w-2 h-2 rounded-full ${running ? "bg-blue-500" : errorText ? "bg-red-500" : "bg-green-500"}`}
+          />
         </div>
         <Button
           variant="ghost"
@@ -369,7 +418,9 @@ export function PcWebRunnerPanel() {
           onClick={runTest}
           disabled={running}
         >
-          <RotateCw className={`w-4 h-4 text-[#6B7280] ${running ? "animate-spin" : ""}`} />
+          <RotateCw
+            className={`w-4 h-4 text-[#6B7280] ${running ? "animate-spin" : ""}`}
+          />
         </Button>
       </div>
 
@@ -405,7 +456,9 @@ export function PcWebRunnerPanel() {
         >
           {!browserReady || browserError ? (
             <div className="w-full h-full flex items-center justify-center px-4 text-center">
-              <span className={`text-sm ${browserError ? "text-[#EF4444]" : "text-[#9CA3AF]"}`}>
+              <span
+                className={`text-sm ${browserError ? "text-[#EF4444]" : "text-[#9CA3AF]"}`}
+              >
                 {browserError || "正在加载 PC 浏览器..."}
               </span>
             </div>

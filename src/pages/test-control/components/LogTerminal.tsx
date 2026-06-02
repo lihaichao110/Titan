@@ -1,18 +1,18 @@
 import { useLayoutEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Label } from "@/components/ui/label";
+} from "@/components/select";
+import { Switch } from "@/components/switch";
+import { ScrollArea } from "@/components/scroll-area";
+import { Label } from "@/components/label";
 import { Trash2 } from "lucide-react";
-import { useExecutionStore } from "../store/executionStore";
-import type { LogLevel } from "../types";
+import { useExecutionStore } from "@/store/test-control";
+import type { LogLevel } from "../../../types";
 
 const levelColors: Record<LogLevel, string> = {
   INFO: "bg-blue-100 text-[#2563FF]",
@@ -42,9 +42,9 @@ export function LogTerminal({ height = "h-[640px]" }: { height?: string }) {
   }, [autoScroll, logFilter, filteredLogs.length]);
 
   return (
-    <div 
+    <div
       className={`${height} min-w-0 flex flex-col bg-white rounded-2xl shadow-[0_1px_2px_rgba(0,0,0,.04)] border border-[#E5E7EB] overflow-hidden`}
-      >
+    >
       {/* Header toolbar */}
       <div className="h-14 px-5 flex items-center justify-between border-b border-[#E5E7EB]">
         <h3 className="text-sm font-medium text-[#1F2937]">实时日志</h3>
