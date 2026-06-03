@@ -21,7 +21,18 @@ pub struct PcWebStep {
     pub step: u32,
     pub name: String,
     pub kind: String,
+    pub action: String,
+    pub locators: Option<Vec<PcWebLocator>>,
+    pub value: Option<String>,
+    pub timeout_ms: Option<u64>,
     pub instruction: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PcWebLocator {
+    pub r#type: String,
+    pub value: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -143,32 +154,6 @@ fn eval_json(webview: &Webview<Wry>, js: String, timeout: Duration) -> Result<Va
     serde_json::from_str(&raw).map_err(|e| format!("PC 浏览器脚本结果解析失败: {}", e))
 }
 
-fn baidu_check_script(condition: &str) -> String {
-    format!(
-        r##"
-        (() => {{
-          const hasCaptcha = () => /安全验证|验证一下|拖动滑块|请完成下方验证/.test(document.body?.innerText || "");
-          const findSearchInput = () => {{
-            const selectors = ["#kw", "input[name='wd']", "input[aria-label*='搜索']", "input[placeholder*='搜索']"];
-            for (const selector of selectors) {{
-              for (const element of document.querySelectorAll(selector)) {{
-                const rect = element.getBoundingClientRect();
-                const style = getComputedStyle(element);
-                if (rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none") {{
-                  return element;
-                }}
-              }}
-            }}
-            return null;
-          }};
-          const hasResults = () => document.querySelectorAll("#content_left .result, #content_left .c-container, #content_left h3 a").length > 0;
-          if (hasCaptcha()) return {{ ok: false, error: "百度触发安全验证，无法继续自动执行搜索" }};
-          return {{ ok: Boolean({condition}) }};
-        }})()
-        "##,
-    )
-}
-
 fn ok_value(value: &Value) -> bool {
     if value.get("ok").and_then(Value::as_bool).unwrap_or(false) {
         return true;
@@ -190,40 +175,6 @@ fn ensure_ok(value: Value, fallback: &str) -> Result<(), String> {
     }
 
     Err(error_value(&value).unwrap_or_else(|| fallback.to_string()))
-}
-
-fn wait_for_baidu_condition(
-    webview: &Webview<Wry>,
-    condition: &str,
-    timeout: Duration,
-    fallback: &str,
-) -> Result<(), String> {
-    let deadline = Instant::now() + timeout;
-    while Instant::now() < deadline {
-        let value = eval_json(
-            webview,
-            baidu_check_script(condition),
-            Duration::from_secs(2),
-        )?;
-        if ok_value(&value) {
-            return Ok(());
-        }
-        if let Some(error) = error_value(&value) {
-            return Err(error);
-        }
-        std::thread::sleep(Duration::from_millis(250));
-    }
-
-    Err(fallback.to_string())
-}
-
-fn wait_for_ready(webview: &Webview<Wry>, timeout: Duration) -> Result<(), String> {
-    wait_for_baidu_condition(
-        webview,
-        "document.readyState === 'interactive' || document.readyState === 'complete'",
-        timeout,
-        "页面加载超时",
-    )
 }
 
 fn wait_for_current_page_ready(webview: &Webview<Wry>, timeout: Duration) -> Result<(), String> {
@@ -262,94 +213,28 @@ fn wait_for_current_page_ready(webview: &Webview<Wry>, timeout: Duration) -> Res
     Err(last_error)
 }
 
-fn assert_baidu_home_ready(webview: &Webview<Wry>) -> Result<(), String> {
-    wait_for_baidu_condition(
-        webview,
-        "Boolean(findSearchInput())",
-        STEP_TIMEOUT,
-        "未找到可见的百度搜索框",
-    )
+fn step_timeout(step: &PcWebStep) -> Duration {
+    step.timeout_ms
+        .map(Duration::from_millis)
+        .unwrap_or(STEP_TIMEOUT)
 }
 
-fn run_baidu_search(webview: &Webview<Wry>) -> Result<(), String> {
-    let value = eval_json(
-        webview,
-        r##"
-        (() => {
-          const hasCaptcha = () => /安全验证|验证一下|拖动滑块|请完成下方验证/.test(document.body?.innerText || "");
-          const findSearchInput = () => {
-            const selectors = ["#kw", "input[name='wd']", "input[aria-label*='搜索']", "input[placeholder*='搜索']"];
-            for (const selector of selectors) {
-              for (const element of document.querySelectorAll(selector)) {
-                const rect = element.getBoundingClientRect();
-                const style = getComputedStyle(element);
-                if (rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none") {
-                  return element;
-                }
-              }
-            }
-            return null;
-          };
-          if (hasCaptcha()) return { ok: false, error: "百度触发安全验证，无法继续自动执行搜索" };
-          const input = findSearchInput();
-          if (!input) return { ok: false, error: "未找到可见的百度搜索框" };
-          input.focus();
-          input.value = "今日新闻";
-          input.dispatchEvent(new Event("input", { bubbles: true }));
-          input.dispatchEvent(new Event("change", { bubbles: true }));
-          window.location.href = `/s?wd=${encodeURIComponent("今日新闻")}`;
-          return { ok: true };
-        })()
-        "##
-        .to_string(),
-        STEP_TIMEOUT,
-    )?;
-    ensure_ok(value, "提交百度搜索失败")?;
-    wait_for_ready(webview, NAVIGATION_TIMEOUT)
+fn step_locators(step: &PcWebStep) -> &[PcWebLocator] {
+    step.locators.as_deref().unwrap_or(&[])
 }
 
-fn assert_baidu_search_results_ready(webview: &Webview<Wry>) -> Result<(), String> {
-    wait_for_baidu_condition(
-        webview,
-        "Boolean(findSearchInput()) && hasResults() && /baidu\\.com\\/s|wd=/.test(location.href)",
-        STEP_TIMEOUT,
-        "未找到“今日新闻”相关搜索结果列表",
-    )
-}
-
-fn open_first_baidu_news_result(webview: &Webview<Wry>) -> Result<(), String> {
-    let value = eval_json(
-        webview,
-        r##"
-        (() => {
-          const hasCaptcha = () => /安全验证|验证一下|拖动滑块|请完成下方验证/.test(document.body?.innerText || "");
-          if (hasCaptcha()) return { ok: false, error: "百度触发安全验证，无法继续自动执行搜索" };
-          const link = document.querySelector("#content_left .result h3 a, #content_left .c-container h3 a, #content_left h3 a");
-          if (link?.href) {
-            link.removeAttribute("target");
-            window.location.href = link.href;
-            return { ok: true };
-          }
-          return { ok: false, error: "未找到第一条新闻结果" };
-        })()
-        "##
-        .to_string(),
-        STEP_TIMEOUT + Duration::from_secs(2),
-    )?;
-    ensure_ok(value, "打开第一条新闻失败")?;
-    wait_for_ready(webview, NAVIGATION_TIMEOUT)
-}
-
-fn intra_page_diagnostics_script() -> &'static str {
-    // 运行态 DOM 诊断用于排查 WebView 页面状态，清理代码时不要删除。
-    r##"
+fn page_diagnostics_script(locators: &[PcWebLocator]) -> Result<String, String> {
+    let locators_json = serde_json::to_string(locators).map_err(|e| e.to_string())?;
+    // 运行态 DOM 诊断保留候选定位器，方便直接排查前端数据配置是否命中页面。
+    Ok(r##"
     (() => {
+      const locators = __LOCATORS__;
       const visible = (element) => {
         const rect = element.getBoundingClientRect();
         const style = getComputedStyle(element);
         return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
       };
-      const inputs = Array.from(document.querySelectorAll("input")).map((input) => ({
+      const inputs = Array.from(document.querySelectorAll("input,textarea,select")).map((input) => ({
         type: input.type || "",
         className: input.className || "",
         id: input.id || "",
@@ -358,38 +243,38 @@ fn intra_page_diagnostics_script() -> &'static str {
         visible: visible(input),
         valueLength: input.value?.length || 0
       }));
-      const buttons = Array.from(document.querySelectorAll("button")).map((button) => ({
+      const buttons = Array.from(document.querySelectorAll("button,[role='button'],a")).map((button) => ({
         type: button.type || "",
         className: button.className || "",
-        text: button.innerText.trim(),
+        text: (button.innerText || button.textContent || "").trim(),
         visible: visible(button)
       }));
       return {
         url: location.href,
         title: document.title,
         bodyText: (document.body?.innerText || "").slice(0, 500),
-        textInputCount: document.querySelectorAll("input.ant-input[type='text'], input[placeholder*='用户名'], input[placeholder*='邮箱']").length,
+        locators: JSON.stringify(locators),
+        textInputCount: document.querySelectorAll("input[type='text'], input:not([type]), textarea").length,
         passwordInputCount: document.querySelectorAll("input[type='password']").length,
         inputs: JSON.stringify(inputs),
         buttons: JSON.stringify(buttons)
       };
     })()
     "##
+    .replace("__LOCATORS__", &locators_json))
 }
 
-fn intra_error(webview: &Webview<Wry>, message: &str) -> String {
-    // 保留完整页面诊断，避免只看到“未找到输入框”而无法定位真实 DOM。
-    match eval_json(
-        webview,
-        intra_page_diagnostics_script().to_string(),
-        Duration::from_secs(2),
-    ) {
+fn page_error(webview: &Webview<Wry>, message: &str, locators: &[PcWebLocator]) -> String {
+    match page_diagnostics_script(locators)
+        .and_then(|script| eval_json(webview, script, Duration::from_secs(2)))
+    {
         Ok(value) => format!(
-            "{}。当前 URL: {}，标题: {}，页面文本: {}，文本输入框: {}，密码输入框: {}，输入框: {}，按钮: {}",
+            "{}。当前 URL: {}，标题: {}，页面文本: {}，候选定位器: {}，文本输入框: {}，密码输入框: {}，输入框: {}，按钮: {}",
             message,
             value.get("url").and_then(Value::as_str).unwrap_or("未知"),
             value.get("title").and_then(Value::as_str).unwrap_or("未知"),
             value.get("bodyText").and_then(Value::as_str).unwrap_or(""),
+            value.get("locators").and_then(Value::as_str).unwrap_or("[]"),
             value
                 .get("textInputCount")
                 .and_then(Value::as_u64)
@@ -405,351 +290,180 @@ fn intra_error(webview: &Webview<Wry>, message: &str) -> String {
     }
 }
 
-fn intra_login_dom_helpers() -> &'static str {
-    // CodeVortex 登录页核心定位逻辑，账号/密码/登录按钮选择器不可按重复 JS 清理。
-    r##"
-          const visible = (element) => {
-            if (!element) return false;
-            const rect = element.getBoundingClientRect();
-            const style = getComputedStyle(element);
-            return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
-          };
-          const firstVisible = (selectors) => {
-            for (const selector of selectors) {
-              for (const element of document.querySelectorAll(selector)) {
-                if (visible(element)) return element;
-              }
-            }
-            return null;
-          };
-          const findUsernameInput = () => firstVisible([
-            "input.ant-input[type='text']",
-            "input[placeholder*='用户名']",
-            "input[placeholder*='邮箱']"
-          ]);
-          const findPasswordInput = () => firstVisible([
-            "input.ant-input[type='password']",
-            "input[type='password']",
-            "input[placeholder*='密码']"
-          ]);
-          const findLoginButton = () => firstVisible([
-            ".submit-btn",
-            "button.submit-btn",
-            "button[type='submit']"
-          ]);
+fn step_script(step: &PcWebStep) -> Result<String, String> {
+    let step_json = serde_json::to_string(step).map_err(|e| e.to_string())?;
+    // 通用执行器只理解结构化 action/locator 数据，instruction 只保留给前端展示。
+    Ok(r##"
+    (() => {
+      const step = __STEP__;
+      const locators = step.locators || [];
+      const expectedValue = step.value ?? "";
+
+      const visible = (element) => {
+        if (!element) return false;
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+      };
+
+      const textOf = (element) => element?.innerText || element?.textContent || element?.value || "";
+      const describe = (element) => {
+        if (!element) return "";
+        const id = element.id ? `#${element.id}` : "";
+        const name = element.name ? `[name="${element.name}"]` : "";
+        const placeholder = element.placeholder ? `[placeholder="${element.placeholder}"]` : "";
+        return `${element.tagName.toLowerCase()}${id}${name}${placeholder}`;
+      };
+
+      const byCss = (value) => {
+        try {
+          return Array.from(document.querySelectorAll(value));
+        } catch {
+          return [];
+        }
+      };
+      const byText = (value) => {
+        const interactive = Array.from(document.querySelectorAll("button,a,[role='button'],label"));
+        const fallback = Array.from(document.querySelectorAll("span,div,p,h1,h2,h3,h4,h5,h6"));
+        return [...interactive, ...fallback].filter((element) => textOf(element).includes(value));
+      };
+      const byPlaceholder = (value) => Array.from(document.querySelectorAll("input,textarea"))
+        .filter((element) => (element.placeholder || "").includes(value));
+      const byName = (value) => Array.from(document.querySelectorAll("input,textarea,select,button"))
+        .filter((element) => element.name === value);
+
+      const findElement = () => {
+        for (const locator of locators) {
+          const value = locator.value || "";
+          const candidates =
+            locator.type === "css" ? byCss(value) :
+            locator.type === "text" ? byText(value) :
+            locator.type === "placeholder" ? byPlaceholder(value) :
+            locator.type === "name" ? byName(value) :
+            [];
+          const element = candidates.find(visible);
+          if (element) return { element, locator };
+        }
+        return { element: null, locator: null };
+      };
+
+      // 受控表单要走原生 value setter，避免 React/AntD 状态没有同步。
+      const nativeValueDescriptor = (element) => {
+        const tagName = element.tagName?.toLowerCase();
+        if (tagName === "textarea") {
+          return Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
+        }
+        if (tagName === "select") {
+          return Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+        }
+        return Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")
+          || Object.getOwnPropertyDescriptor(element.constructor.prototype, "value");
+      };
+
+      const setValue = (element, value) => {
+        const descriptor = nativeValueDescriptor(element);
+        element.focus?.();
+        if (descriptor?.set) {
+          descriptor.set.call(element, value);
+        } else {
+          element.value = value;
+        }
+        element.dispatchEvent(new Event("input", { bubbles: true }));
+        element.dispatchEvent(new Event("change", { bubbles: true }));
+        element.blur?.();
+      };
+
+      const verifyValue = (element, value) => {
+        const currentValue = element.value ?? "";
+        return {
+          ok: currentValue === value,
+          currentValue,
+          currentLength: String(currentValue).length,
+          expectedLength: String(value).length,
+        };
+      };
+
+      const action = step.action;
+      if (action === "waitForUrl") {
+        return {
+          ok: location.href.includes(expectedValue),
+          error: `当前 URL 未包含期望内容: ${expectedValue}`
+        };
+      }
+
+      if (action === "assertText" && locators.length === 0) {
+        return {
+          ok: (document.body?.innerText || "").includes(expectedValue),
+          error: `页面未包含期望文本: ${expectedValue}`
+        };
+      }
+
+      const { element } = findElement();
+      if (!element) return { ok: false, error: "候选定位器未命中可见元素" };
+
+      if (action === "assertVisible" || action === "waitForVisible") {
+        return { ok: true, detail: `命中元素: ${describe(element)}` };
+      }
+      if (action === "assertText") {
+        return {
+          ok: textOf(element).includes(expectedValue),
+          error: `元素文本未包含期望内容: ${expectedValue}`,
+          detail: `命中元素: ${describe(element)}`
+        };
+      }
+      if (action === "fill") {
+        setValue(element, expectedValue);
+        const verification = verifyValue(element, expectedValue);
+        return {
+          ok: verification.ok,
+          error: `输入后值校验失败: 当前长度 ${verification.currentLength}，期望长度 ${verification.expectedLength}`,
+          detail: verification.ok
+            ? `已输入并校验元素值: ${describe(element)}`
+            : `已定位但输入未生效: ${describe(element)}`
+        };
+      }
+      if (action === "clear") {
+        setValue(element, "");
+        const verification = verifyValue(element, "");
+        return {
+          ok: verification.ok,
+          error: `清空后值校验失败: 当前长度 ${verification.currentLength}`,
+          detail: verification.ok ? `已清空元素: ${describe(element)}` : `已定位但清空未生效: ${describe(element)}`
+        };
+      }
+      if (action === "click") {
+        element.click();
+        return { ok: true, detail: `已点击元素，后续步骤继续等待页面结果: ${describe(element)}` };
+      }
+      if (action === "select") {
+        setValue(element, expectedValue);
+        return { ok: true, detail: `已选择元素: ${describe(element)}` };
+      }
+
+      return { ok: false, error: `不支持的 PC Web 动作: ${action}` };
+    })()
     "##
+    .replace("__STEP__", &step_json))
 }
 
-fn intra_login_match_summary(webview: &Webview<Wry>) -> Result<String, String> {
-    let value = eval_json(
-        webview,
-        r##"
-        (() => {
-__HELPERS__
-          const usernameInput = findUsernameInput();
-          const passwordInput = findPasswordInput();
-          const describe = (input) => input ? `${input.tagName.toLowerCase()}.${input.className || ""}[type="${input.type || ""}"][placeholder="${input.placeholder || ""}"]` : "未命中";
-          return {
-            ok: true,
-            summary: `账号框: ${describe(usernameInput)}；密码框: ${describe(passwordInput)}`
-          };
-        })()
-        "##
-        .replace("__HELPERS__", intra_login_dom_helpers()),
-        Duration::from_secs(2),
-    )?;
+fn run_step(webview: &Webview<Wry>, step: &PcWebStep) -> Result<(), String> {
+    let deadline = Instant::now() + step_timeout(step);
+    let locators = step_locators(step);
+    let script = step_script(step)?;
+    let mut last_error = format!("步骤执行失败: {}", step.instruction);
 
-    Ok(value
-        .get("summary")
-        .and_then(Value::as_str)
-        .unwrap_or("账号框/密码框摘要不可用")
-        .to_string())
-}
-
-fn intra_check_script(condition: &str) -> String {
-    format!(
-        r##"
-        (() => {{
-{helpers}
-          const hasLoginForm = () => Boolean(document.querySelector(".login-form")) || document.body.innerText.includes("欢迎登录");
-          const hasUsernameInput = () => Boolean(findUsernameInput());
-          const hasPasswordInput = () => Boolean(findPasswordInput());
-          const hasToken = () => Boolean(sessionStorage.getItem("lihaichao_token"));
-          const isLoggedIn = () => hasToken() || (!location.pathname.includes("/login") && document.body.innerText.includes("创作平台"));
-          return {{ ok: Boolean({condition}) }};
-        }})()
-        "##,
-        helpers = intra_login_dom_helpers(),
-        condition = condition,
-    )
-}
-
-fn wait_for_intra_condition(
-    webview: &Webview<Wry>,
-    condition: &str,
-    timeout: Duration,
-    fallback: &str,
-) -> Result<(), String> {
-    let deadline = Instant::now() + timeout;
     while Instant::now() < deadline {
-        let value = eval_json(
-            webview,
-            intra_check_script(condition),
-            Duration::from_secs(2),
-        )?;
+        let value = eval_json(webview, script.clone(), Duration::from_secs(2))?;
         if ok_value(&value) {
-            return Ok(());
+            return ensure_ok(value, "步骤执行失败");
+        }
+        if let Some(error) = error_value(&value) {
+            last_error = error;
         }
         std::thread::sleep(Duration::from_millis(250));
     }
 
-    Err(intra_error(webview, fallback))
-}
-
-fn assert_intra_login_ready(webview: &Webview<Wry>) -> Result<(), String> {
-    wait_for_intra_condition(
-        webview,
-        "hasLoginForm() && hasUsernameInput() && hasPasswordInput()",
-        STEP_TIMEOUT,
-        "未找到 intra 登录表单",
-    )
-}
-
-fn set_intra_input_value(webview: &Webview<Wry>, field: &str, value: &str) -> Result<(), String> {
-    // AntD 表单可能异步渲染，必须保留等待重试，不能改回一次查找失败即报错。
-    let field_json = serde_json::to_string(field).map_err(|e| e.to_string())?;
-    let value_json = serde_json::to_string(value).map_err(|e| e.to_string())?;
-    let script = r##"
-    (() => {
-      const field = __FIELD__;
-      const nextValue = __VALUE__;
-__HELPERS__
-      const usernameInput = findUsernameInput();
-      const passwordInput = findPasswordInput();
-      const input = field === "username" ? usernameInput : passwordInput;
-      if (!input) return { ok: false, error: field === "username" ? "未找到用户名输入框" : "未找到密码输入框" };
-      const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
-      input.focus();
-      descriptor?.set?.call(input, nextValue);
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      input.dispatchEvent(new Event("change", { bubbles: true }));
-      return { ok: true };
-    })()
-    "##
-    .replace("__HELPERS__", intra_login_dom_helpers())
-    .replace("__FIELD__", &field_json)
-    .replace("__VALUE__", &value_json);
-
-    let deadline = Instant::now() + STEP_TIMEOUT;
-    let mut last_error = if field == "username" {
-        "未找到用户名输入框".to_string()
-    } else {
-        "未找到密码输入框".to_string()
-    };
-
-    while Instant::now() < deadline {
-        let result = eval_json(webview, script.clone(), Duration::from_secs(2))?;
-        if ok_value(&result) {
-            return Ok(());
-        }
-        if let Some(error) = error_value(&result) {
-            last_error = error;
-        }
-        std::thread::sleep(Duration::from_millis(200));
-    }
-
-    Err(intra_error(
-        webview,
-        &format!("输入账号密码失败: {}", last_error),
-    ))
-}
-
-fn assert_intra_credentials_value(webview: &Webview<Wry>) -> Result<(), String> {
-    let value = eval_json(
-        webview,
-        r##"
-        (() => {
-__HELPERS__
-          const usernameInput = findUsernameInput();
-          const passwordInput = findPasswordInput();
-          if (!usernameInput || !passwordInput) return { ok: false, error: "未找到用户名或密码输入框" };
-          return {
-            ok: usernameInput.value === "test_user" && passwordInput.value === "test_password",
-            error: "账号或密码输入结果不正确"
-          };
-        })()
-        "##
-        .replace("__HELPERS__", intra_login_dom_helpers()),
-        STEP_TIMEOUT,
-    )?;
-    ensure_ok(value, &intra_error(webview, "账号密码输入校验失败"))
-}
-
-fn fill_intra_credentials(
-    app_handle: &AppHandle,
-    logs: &mut Vec<PcWebLogEntry>,
-    webview: &Webview<Wry>,
-    step: &PcWebStep,
-) -> Result<(), String> {
-    // StepListView 第 2 步依赖逐字输入和最终校验来展示真实执行过程。
-    emit_step(
-        app_handle,
-        json!({
-            "step": step.step,
-            "status": "executing",
-            "duration": null,
-            "detail": "正在输入账号..."
-        }),
-    )?;
-    emit_log(
-        app_handle,
-        logs,
-        "INFO",
-        intra_login_match_summary(webview).unwrap_or_else(|error| format!("登录表单输入框摘要获取失败: {}", error)),
-    )?;
-    emit_log(app_handle, logs, "INFO", "输入账号: test_user")?;
-    let mut username = String::new();
-    for character in "test_user".chars() {
-        username.push(character);
-        set_intra_input_value(webview, "username", &username)?;
-        std::thread::sleep(Duration::from_millis(90));
-    }
-
-    emit_step(
-        app_handle,
-        json!({
-            "step": step.step,
-            "status": "executing",
-            "duration": null,
-            "detail": "正在输入密码..."
-        }),
-    )?;
-    emit_log(app_handle, logs, "INFO", "输入密码: *************")?;
-    let mut password = String::new();
-    for character in "test_password".chars() {
-        password.push(character);
-        set_intra_input_value(webview, "password", &password)?;
-        std::thread::sleep(Duration::from_millis(90));
-    }
-
-    emit_step(
-        app_handle,
-        json!({
-            "step": step.step,
-            "status": "executing",
-            "duration": null,
-            "detail": "正在校验账号密码输入结果..."
-        }),
-    )?;
-    emit_log(app_handle, logs, "INFO", "校验账号密码输入结果")?;
-    assert_intra_credentials_value(webview)?;
-    emit_log(app_handle, logs, "SUCCESS", "账号密码输入校验通过")?;
-    Ok(())
-}
-
-fn submit_intra_login(webview: &Webview<Wry>) -> Result<(), String> {
-    let value = eval_json(
-        webview,
-        r##"
-        (() => {
-__HELPERS__
-          const button = findLoginButton();
-          if (!button) return { ok: false, error: "未找到登录按钮" };
-          button.click();
-          return { ok: true };
-        })()
-        "##
-        .replace("__HELPERS__", intra_login_dom_helpers()),
-        STEP_TIMEOUT,
-    )?;
-    ensure_ok(value, &intra_error(webview, "点击登录按钮失败"))
-}
-
-fn assert_intra_logged_in(webview: &Webview<Wry>) -> Result<(), String> {
-    wait_for_intra_condition(
-        webview,
-        "isLoggedIn()",
-        STEP_TIMEOUT,
-        "登录后未进入后台首页",
-    )
-}
-
-fn is_baidu_home_assert_step(step: &PcWebStep) -> bool {
-    step.kind == "assert"
-        && step.instruction.contains("百度首页")
-        && step.instruction.contains("搜索框")
-}
-
-fn is_baidu_search_step(step: &PcWebStep) -> bool {
-    step.kind != "assert"
-        && step.instruction.contains("百度搜索框")
-        && step.instruction.contains("今日新闻")
-}
-
-fn is_baidu_search_result_assert_step(step: &PcWebStep) -> bool {
-    step.kind == "assert"
-        && step.instruction.contains("搜索结果")
-        && step.instruction.contains("今日新闻")
-}
-
-fn is_baidu_open_first_news_step(step: &PcWebStep) -> bool {
-    step.kind != "assert" && step.instruction.contains("第一条新闻")
-}
-
-fn is_intra_login_ready_step(step: &PcWebStep) -> bool {
-    step.kind == "assert"
-        && step.instruction.contains("CodeVortex 登录页")
-        && step.instruction.contains("用户名")
-        && step.instruction.contains("密码")
-}
-
-fn is_intra_fill_credentials_step(step: &PcWebStep) -> bool {
-    step.kind != "assert"
-        && step.instruction.contains("test_user")
-        && step.instruction.contains("test_password")
-}
-
-fn is_intra_submit_login_step(step: &PcWebStep) -> bool {
-    step.kind != "assert" && step.instruction.contains("登录按钮")
-}
-
-fn is_intra_logged_in_step(step: &PcWebStep) -> bool {
-    step.kind == "assert"
-        && step.instruction.contains("CodeVortex")
-        && step.instruction.contains("后台首页")
-}
-
-fn run_step(
-    app_handle: &AppHandle,
-    logs: &mut Vec<PcWebLogEntry>,
-    webview: &Webview<Wry>,
-    step: &PcWebStep,
-) -> Result<(), String> {
-    // 这里的职责拆分对应前端 4 个步骤，清理时不要合并登录页、输入、点击和验证。
-    if is_intra_login_ready_step(step) {
-        assert_intra_login_ready(webview)?;
-        emit_log(app_handle, logs, "SUCCESS", "登录表单已就绪")?;
-        Ok(())
-    } else if is_intra_fill_credentials_step(step) {
-        fill_intra_credentials(app_handle, logs, webview, step)
-    } else if is_intra_submit_login_step(step) {
-        submit_intra_login(webview)
-    } else if is_intra_logged_in_step(step) {
-        assert_intra_logged_in(webview)
-    } else if is_baidu_home_assert_step(step) {
-        assert_baidu_home_ready(webview)
-    } else if is_baidu_search_step(step) {
-        run_baidu_search(webview)
-    } else if is_baidu_search_result_assert_step(step) {
-        assert_baidu_search_results_ready(webview)
-    } else if is_baidu_open_first_news_step(step) {
-        open_first_baidu_news_result(webview)
-    } else {
-        Err(format!(
-            "不支持该 PC Web 步骤，请先实现 WebView 执行逻辑: {}",
-            step.instruction
-        ))
-    }
+    Err(page_error(webview, &last_error, locators))
 }
 
 #[tauri::command]
@@ -796,9 +510,9 @@ pub async fn run_pc_web_test(
 
         let step_result = if index == 0 {
             wait_for_current_page_ready(&webview, NAVIGATION_TIMEOUT)
-                .and_then(|_| run_step(&app_handle, &mut logs, &webview, step))
+                .and_then(|_| run_step(&webview, step))
         } else {
-            run_step(&app_handle, &mut logs, &webview, step)
+            run_step(&webview, step)
         };
 
         match step_result {

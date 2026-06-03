@@ -108,9 +108,9 @@ export function StepListView({ height = "h-[640px]" }: StepListViewProps) {
                           </span>
                         )}
                       </div>
-                      {step.locator && (
+                      {step.instruction && (
                         <div className="min-w-0 break-words text-xs text-[#6B7280] mt-0.5">
-                          {step.locator}
+                          {step.instruction}
                         </div>
                       )}
                     </div>
