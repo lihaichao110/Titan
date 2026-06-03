@@ -7,6 +7,7 @@ use tauri::{AppHandle, Emitter, Manager, Webview, Wry};
 const PC_BROWSER_LABEL: &str = "pc-browser-preview";
 const STEP_TIMEOUT: Duration = Duration::from_secs(20);
 const NAVIGATION_TIMEOUT: Duration = Duration::from_secs(60);
+const STEP_POLL_INTERVAL: Duration = Duration::from_millis(80);
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -360,17 +361,102 @@ fn step_script(step: &PcWebStep) -> Result<String, String> {
           || Object.getOwnPropertyDescriptor(element.constructor.prototype, "value");
       };
 
-      const setValue = (element, value) => {
+      const setRawValue = (element, value) => {
         const descriptor = nativeValueDescriptor(element);
-        element.focus?.();
         if (descriptor?.set) {
           descriptor.set.call(element, value);
         } else {
           element.value = value;
         }
+      };
+
+      const dispatchInput = (element, data = null) => {
+        try {
+          element.dispatchEvent(new InputEvent("input", {
+            bubbles: true,
+            inputType: data === null ? "deleteContentBackward" : "insertText",
+            data,
+          }));
+        } catch {
+          element.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      };
+
+      const dispatchKeyboard = (element, type, key) => {
+        element.dispatchEvent(new KeyboardEvent(type, {
+          key,
+          bubbles: true,
+          cancelable: true,
+        }));
+      };
+
+      const setValue = (element, value) => {
+        element.focus?.();
+        setRawValue(element, value);
         element.dispatchEvent(new Event("input", { bubbles: true }));
         element.dispatchEvent(new Event("change", { bubbles: true }));
         element.blur?.();
+      };
+
+      const resetTypingState = () => {
+        window.__titanTypingState = null;
+      };
+
+      const typeNextCharacter = (element, value) => {
+        const nextValue = String(value);
+        const chars = Array.from(nextValue);
+        const signature = `${step.step}:${step.action}:${nextValue}:${describe(element)}`;
+        const state = window.__titanTypingState;
+
+        // eval_with_callback 是同步取值，逐字输入进度需要保存在页面运行时供下一轮轮询继续。
+        if (
+          !state ||
+          state.signature !== signature ||
+          state.element !== element ||
+          !state.element?.isConnected
+        ) {
+          element.focus?.();
+          setRawValue(element, "");
+          window.__titanTypingState = { signature, element, index: 0 };
+        }
+
+        const currentState = window.__titanTypingState;
+        if (chars.length === 0) {
+          setRawValue(element, "");
+          dispatchInput(element, null);
+          element.dispatchEvent(new Event("change", { bubbles: true }));
+          element.blur?.();
+          resetTypingState();
+          return verifyValue(element, nextValue);
+        }
+
+        if (currentState.index < chars.length) {
+          const key = chars[currentState.index];
+          const typedValue = chars.slice(0, currentState.index + 1).join("");
+          dispatchKeyboard(element, "keydown", key);
+          dispatchKeyboard(element, "keypress", key);
+          setRawValue(element, typedValue);
+          dispatchInput(element, key);
+          dispatchKeyboard(element, "keyup", key);
+          currentState.index += 1;
+        }
+
+        if (currentState.index < chars.length) {
+          return {
+            ok: false,
+            currentLength: String(element.value ?? "").length,
+            expectedLength: nextValue.length,
+            typing: true,
+          };
+        }
+
+        element.dispatchEvent(new Event("change", { bubbles: true }));
+        element.blur?.();
+        const verification = verifyValue(element, nextValue);
+        if (verification.ok) {
+          resetTypingState();
+        }
+        return verification;
       };
 
       const verifyValue = (element, value) => {
@@ -412,11 +498,12 @@ fn step_script(step: &PcWebStep) -> Result<String, String> {
         };
       }
       if (action === "fill") {
-        setValue(element, expectedValue);
-        const verification = verifyValue(element, expectedValue);
+        const verification = typeNextCharacter(element, expectedValue);
         return {
           ok: verification.ok,
-          error: `输入后值校验失败: 当前长度 ${verification.currentLength}，期望长度 ${verification.expectedLength}`,
+          error: verification.typing
+            ? `正在逐字输入: 当前长度 ${verification.currentLength}，期望长度 ${verification.expectedLength}`
+            : `输入后值校验失败: 当前长度 ${verification.currentLength}，期望长度 ${verification.expectedLength}`,
           detail: verification.ok
             ? `已输入并校验元素值: ${describe(element)}`
             : `已定位但输入未生效: ${describe(element)}`
@@ -460,7 +547,7 @@ fn run_step(webview: &Webview<Wry>, step: &PcWebStep) -> Result<(), String> {
         if let Some(error) = error_value(&value) {
             last_error = error;
         }
-        std::thread::sleep(Duration::from_millis(250));
+        std::thread::sleep(STEP_POLL_INTERVAL);
     }
 
     Err(page_error(webview, &last_error, locators))

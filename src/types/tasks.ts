@@ -1,3 +1,5 @@
+import type { PcWebStep } from "@/types/test-control";
+
 // 任务页共享类型：任务数据、统计卡片数据和页面组件 props 都从这里导出。
 /** 任务列表中支持展示和筛选的测试任务类型。 */
 export type TaskType =
@@ -37,6 +39,8 @@ export interface Task {
   creator: string;
   /** 最近更新时间，直接用于列表展示。 */
   updatedAt: string;
+  /** 任务内部执行数据，当前用于保存 PC Web 自动化步骤。 */
+  data: PcWebStep[];
 }
 
 /** 任务页顶部统计卡片的展示数据。 */

@@ -1,4 +1,4 @@
-import type { StatsCardData, Task } from "@/types/tasks";
+import type { StatsCardData } from "@/types/tasks";
 
 export const statsCardsData: StatsCardData[] = [
   {
@@ -35,88 +35,5 @@ export const statsCardsData: StatsCardData[] = [
     trend: 0,
     trendLabel: '较昨日',
     color: 'orange',
-  },
-];
-
-export const mockTasks: Task[] = [
-  {
-    id: '1',
-    name: 'API 集成测试',
-    description: '验证所有核心 API 接口的连通性和返回数据准确性',
-    type: '接口测试',
-    status: 'running',
-    environment: 'prod',
-    creator: '张三',
-    updatedAt: '10分钟前',
-  },
-  {
-    id: '2',
-    name: '冒烟测试',
-    description: '核心业务流程冒烟测试，确保主流程可正常运行',
-    type: '功能测试',
-    status: 'completed',
-    environment: 'test',
-    creator: '李四',
-    updatedAt: '1小时前',
-  },
-  {
-    id: '3',
-    name: '性能基准测试',
-    description: '测试系统在高并发场景下的性能表现',
-    type: '性能测试',
-    status: 'failed',
-    environment: 'staging',
-    creator: '王五',
-    updatedAt: '2小时前',
-  },
-  {
-    id: '4',
-    name: 'UI 回归测试',
-    description: '验证 UI 组件在不同浏览器下的兼容性',
-    type: '功能测试',
-    status: 'paused',
-    environment: 'test',
-    creator: '赵六',
-    updatedAt: '3小时前',
-  },
-  {
-    id: '5',
-    name: '数据库迁移测试',
-    description: '验证数据库迁移脚本的正确性和回滚方案',
-    type: '接口测试',
-    status: 'completed',
-    environment: 'staging',
-    creator: '钱七',
-    updatedAt: '5小时前',
-  },
-  {
-    id: '6',
-    name: '安全漏洞扫描',
-    description: '自动化安全扫描，检测常见 Web 安全漏洞',
-    type: '性能测试',
-    status: 'running',
-    environment: 'prod',
-    creator: '孙八',
-    updatedAt: '30分钟前',
-  },
-  {
-    id: '7',
-    name: '支付流程测试',
-    description: '完整的支付链路测试，包括多个支付渠道',
-    type: '功能测试',
-    status: 'completed',
-    environment: 'test',
-    creator: '周九',
-    updatedAt: '1天前',
-  },
-  {
-    id: '8',
-    name: '消息队列测试',
-    description: '验证消息队列的可靠性和顺序性',
-    type: '接口测试',
-    status: 'failed',
-    environment: 'staging',
-    creator: '吴十',
-    updatedAt: '2天前',
   },
 ];

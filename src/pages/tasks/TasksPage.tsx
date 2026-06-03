@@ -4,7 +4,8 @@ import { ActionToolbar } from "./components/ActionToolbar";
 import { StatsCards } from "./components/StatsCards";
 import { TaskList } from "./components/TaskList";
 import { Pagination } from "./components/Pagination";
-import { statsCardsData, mockTasks } from "./data/mockData";
+import { tasksData } from "./data";
+import { statsCardsData } from "./data/mockData";
 
 export function TasksPage() {
   const [activeTab, setActiveTab] = useState("all");
@@ -19,7 +20,7 @@ export function TasksPage() {
       <TaskList
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        tasks={mockTasks}
+        tasks={tasksData}
       />
       <Pagination
         currentPage={currentPage}

@@ -2,13 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Globe2, Play, RotateCw } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
+import { tasksData } from "@/pages/tasks/data";
 import { useExecutionStore } from "@/store/test-control";
 import type {
   BrowserBounds,
   ExecutionStep,
-  PcWebLocator,
   PcWebRunResult,
   PcWebRunnerEvent,
   PcWebStep,
@@ -19,84 +20,7 @@ const PC_BROWSER_VIEWPORT = {
   height: 900,
 };
 
-const usernameLocators: PcWebLocator[] = [
-  { type: "css", value: "input.ant-input[type='text']" },
-  { type: "css", value: "input[type='email']" },
-  { type: "css", value: "input[name='account']" },
-  { type: "css", value: "input[name='email']" },
-  { type: "css", value: "input[id*='user' i]" },
-  { type: "css", value: "input[id*='account' i]" },
-  { type: "placeholder", value: "账号" },
-  { type: "placeholder", value: "手机号" },
-  { type: "placeholder", value: "手机" },
-  { type: "placeholder", value: "用户名" },
-  { type: "placeholder", value: "邮箱" },
-  { type: "name", value: "username" },
-];
-
-const passwordLocators: PcWebLocator[] = [
-  { type: "css", value: "input.ant-input[type='password']" },
-  { type: "css", value: "input[type='password']" },
-  { type: "css", value: "input[name='password']" },
-  { type: "css", value: "input[id*='password' i]" },
-  { type: "css", value: "input[autocomplete='current-password']" },
-  { type: "css", value: "input[autocomplete='new-password']" },
-  { type: "placeholder", value: "密码" },
-  { type: "name", value: "password" },
-];
-
-// 前端数据直接描述动作和定位器，后端只负责按这些数据执行通用 Web 操作。
-const defaultSteps: PcWebStep[] = [
-  {
-    step: 1,
-    name: "加载登录页",
-    kind: "assert",
-    action: "assertVisible",
-    locators: usernameLocators,
-    instruction:
-      "校验 CodeVortex 登录页已经加载完成，页面上能看到用户名输入框",
-  },
-  {
-    step: 2,
-    name: "输入账号",
-    kind: "act",
-    action: "fill",
-    locators: usernameLocators,
-    value: "test_user",
-    instruction: "在登录页输入测试账号 test_user",
-  },
-  {
-    step: 3,
-    name: "输入密码",
-    kind: "act",
-    action: "fill",
-    locators: passwordLocators,
-    value: "test_password",
-    instruction: "在登录页输入测试密码",
-  },
-  {
-    step: 4,
-    name: "点击登录",
-    kind: "act",
-    action: "click",
-    locators: [
-      { type: "css", value: ".submit-btn" },
-      { type: "css", value: "button.submit-btn" },
-      { type: "css", value: "button[type='submit']" },
-      { type: "text", value: "登录" },
-    ],
-    instruction: "点击登录按钮提交表单",
-  },
-  {
-    step: 5,
-    name: "验证进入后台首页",
-    kind: "assert",
-    action: "assertText",
-    value: "创作平台",
-    timeoutMs: 20000,
-    instruction: "登录后已经进入 CodeVortex 后台首页",
-  },
-];
+const EMPTY_PC_WEB_STEPS: PcWebStep[] = [];
 
 function toExecutionSteps(steps: PcWebStep[]): ExecutionStep[] {
   return steps.map((step) => ({
@@ -141,6 +65,8 @@ export function PcWebRunnerPanel() {
     addLog,
     clearLogs,
   } = useExecutionStore();
+  const [searchParams] = useSearchParams();
+  const taskId = searchParams.get("id");
   const [url, setUrl] = useState("https://intra.lihaichao.cn/login");
   const [running, setRunning] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
@@ -152,7 +78,20 @@ export function PcWebRunnerPanel() {
   const runtimeIntervalRef = useRef<number | null>(null);
   // 命令直接失败时才兜底标失败，避免已有 step 事件后覆盖真实执行状态。
   const hasStepEventRef = useRef(false);
-  const executionSteps = useMemo(() => toExecutionSteps(defaultSteps), []);
+  // 任务步骤来自任务页跳转携带的 id，避免执行器始终跑固定默认步骤。
+  const currentTask = useMemo(
+    () => tasksData.find((task) => task.id === taskId),
+    [taskId],
+  );
+  const taskSteps = currentTask?.data ?? EMPTY_PC_WEB_STEPS;
+  const taskLoadError = !taskId
+    ? "缺少任务 id，请从任务列表进入测试控制台"
+    : !currentTask
+      ? `未找到任务 id 为 ${taskId} 的测试任务`
+      : taskSteps.length === 0
+        ? "当前任务没有可执行的 PC Web 步骤"
+        : null;
+  const executionSteps = useMemo(() => toExecutionSteps(taskSteps), [taskSteps]);
 
   const getBrowserBounds = useCallback((): BrowserBounds | null => {
     const host = browserHostRef.current;
@@ -253,7 +192,8 @@ export function PcWebRunnerPanel() {
 
   useEffect(() => {
     setExecutionSteps(executionSteps);
-  }, [executionSteps, setExecutionSteps]);
+    setErrorText(taskLoadError);
+  }, [executionSteps, setExecutionSteps, taskLoadError]);
 
   useEffect(() => {
     let disposed = false;
@@ -351,6 +291,11 @@ export function PcWebRunnerPanel() {
   };
 
   const runTest = async () => {
+    if (taskLoadError) {
+      setErrorText(taskLoadError);
+      return;
+    }
+
     const targetUrl = normalizeUrl(url);
     if (!targetUrl) {
       setErrorText("请输入有效的 URL");
@@ -384,7 +329,7 @@ export function PcWebRunnerPanel() {
       const result = await invoke<PcWebRunResult>("run_pc_web_test", {
         request: {
           url: targetUrl,
-          steps: defaultSteps,
+          steps: taskSteps,
         },
       });
 
@@ -395,8 +340,9 @@ export function PcWebRunnerPanel() {
       setErrorText(result.success ? null : result.error || "测试执行失败");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (!hasStepEventRef.current) {
-        updateStepResult(defaultSteps[0].step, {
+      const firstStep = taskSteps[0];
+      if (!hasStepEventRef.current && firstStep) {
+        updateStepResult(firstStep.step, {
           status: "failed",
           duration: "00:00:00",
           detail: message,
@@ -460,12 +406,15 @@ export function PcWebRunnerPanel() {
           <Button
             className="h-9 bg-[#2563FF] hover:bg-[#1D4ED8] text-white"
             onClick={runTest}
-            disabled={running}
+            disabled={running || Boolean(taskLoadError)}
           >
             <Play className="w-4 h-4 mr-1.5" />
             执行
           </Button>
         </div>
+        {errorText ? (
+          <p className="mt-2 text-xs text-[#EF4444]">{errorText}</p>
+        ) : null}
       </div>
 
       <div className="flex-1 p-4 overflow-hidden">

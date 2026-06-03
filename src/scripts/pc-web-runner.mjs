@@ -117,7 +117,7 @@ async function findVisibleBaiduSearchInput(page) {
 async function runBaiduSearch(page) {
   await assertNoBaiduCaptcha(page);
   const searchInput = await findVisibleBaiduSearchInput(page);
-  await searchInput.fill('今日新闻');
+  await searchInput.pressSequentially('今日新闻', { delay: 80 });
   await Promise.all([
     page.waitForURL(/baidu\.com\/s|wd=%E4%BB%8A%E6%97%A5%E6%96%B0%E9%97%BB/, { timeout: 15000 }).catch(() => {}),
     searchInput.press('Enter'),
