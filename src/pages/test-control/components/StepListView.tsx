@@ -59,14 +59,12 @@ export function StepListView({ height = "h-[640px]" }: StepListViewProps) {
         <div className="relative min-w-0 p-4">
           {steps.length === 0 ? (
             <div className="h-full min-h-[180px] flex items-center justify-center px-4 text-center">
-              <span className="text-sm text-[#9CA3AF]">
-                暂无待执行步骤
-              </span>
+              <span className="text-sm text-[#9CA3AF]">暂无待执行步骤</span>
             </div>
           ) : (
             <>
               {/* Single vertical connecting line - behind items */}
-              <div className="absolute left-11 top-6 bottom-6 w-0.5 bg-[#E5E7EB]" />
+              <div className="absolute left-11 top-8 bottom-6 w-0.5 bg-[#E5E7EB]" />
 
               {steps.map((step) => {
                 const config = statusConfig[step.status];
@@ -88,7 +86,9 @@ export function StepListView({ height = "h-[640px]" }: StepListViewProps) {
                       ) : isExecuting ? (
                         <Icon className="w-3 h-3 animate-spin" />
                       ) : (
-                        <span className={`text-xs font-medium ${config.textColor}`}>
+                        <span
+                          className={`text-xs font-medium ${config.textColor}`}
+                        >
                           {step.step}
                         </span>
                       )}

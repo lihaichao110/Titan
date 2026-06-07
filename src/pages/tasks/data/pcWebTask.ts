@@ -72,8 +72,9 @@ export const pcWebTask: Task = {
   description: "验证所有核心 API 接口的连通性和返回数据准确性",
   type: "接口测试",
   status: "running",
-  environment: "prod",
+  environment: "pc",
   creator: "张三",
   updatedAt: "10分钟前",
+  url: "https://intra.lihaichao.cn/login",
   data: defaultSteps,
 };

@@ -191,6 +191,8 @@ export type PcWebStepAction =
   | "clear"
   /** 点击目标元素。 */
   | "click"
+  /** 在目标元素上触发回车键。 */
+  | "pressEnter"
   /** 断言目标元素可见。 */
   | "assertVisible"
   /** 断言目标元素文本符合预期。 */

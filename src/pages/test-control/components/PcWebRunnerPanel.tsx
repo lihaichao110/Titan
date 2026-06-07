@@ -67,30 +67,33 @@ export function PcWebRunnerPanel() {
   } = useExecutionStore();
   const [searchParams] = useSearchParams();
   const taskId = searchParams.get("id");
-  const [url, setUrl] = useState("https://intra.lihaichao.cn/login");
+  // 任务步骤和默认 URL 都来自任务页跳转携带的 id，避免执行器跑固定配置。
+  const currentTask = useMemo(
+    () => tasksData.find((task) => task.id === taskId),
+    [taskId],
+  );
+  const taskUrl = currentTask?.url ?? "";
+  const [url, setUrl] = useState(taskUrl);
   const [running, setRunning] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [browserReady, setBrowserReady] = useState(false);
   const [browserError, setBrowserError] = useState<string | null>(null);
   const browserHostRef = useRef<HTMLDivElement | null>(null);
-  const initialUrlRef = useRef(url);
+  const initialUrlRef = useRef(taskUrl);
   const animationFrameRef = useRef<number | null>(null);
   const runtimeIntervalRef = useRef<number | null>(null);
   // 命令直接失败时才兜底标失败，避免已有 step 事件后覆盖真实执行状态。
   const hasStepEventRef = useRef(false);
-  // 任务步骤来自任务页跳转携带的 id，避免执行器始终跑固定默认步骤。
-  const currentTask = useMemo(
-    () => tasksData.find((task) => task.id === taskId),
-    [taskId],
-  );
   const taskSteps = currentTask?.data ?? EMPTY_PC_WEB_STEPS;
   const taskLoadError = !taskId
     ? "缺少任务 id，请从任务列表进入测试控制台"
     : !currentTask
       ? `未找到任务 id 为 ${taskId} 的测试任务`
-      : taskSteps.length === 0
-        ? "当前任务没有可执行的 PC Web 步骤"
-        : null;
+      : !taskUrl
+        ? "当前任务未配置 PC Web 入口 URL"
+        : taskSteps.length === 0
+          ? "当前任务没有可执行的 PC Web 步骤"
+          : null;
   const executionSteps = useMemo(() => toExecutionSteps(taskSteps), [taskSteps]);
 
   const getBrowserBounds = useCallback((): BrowserBounds | null => {
@@ -194,6 +197,12 @@ export function PcWebRunnerPanel() {
     setExecutionSteps(executionSteps);
     setErrorText(taskLoadError);
   }, [executionSteps, setExecutionSteps, taskLoadError]);
+
+  useEffect(() => {
+    // 切换任务时重置输入框默认值；用户在当前任务内手动修改 URL 仍只影响本次执行。
+    setUrl(taskUrl);
+    initialUrlRef.current = taskUrl;
+  }, [taskUrl]);
 
   useEffect(() => {
     let disposed = false;

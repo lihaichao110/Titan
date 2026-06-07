@@ -1,4 +1,5 @@
 import type { PcWebStep } from "@/types/test-control";
+import type { DeviceType } from "@/types/test-control-store";
 
 // 任务页共享类型：任务数据、统计卡片数据和页面组件 props 都从这里导出。
 /** 任务列表中支持展示和筛选的测试任务类型。 */
@@ -33,12 +34,14 @@ export interface Task {
   type: TaskType;
   /** 当前任务执行状态。 */
   status: TaskStatus;
-  /** 任务运行或归属的测试环境。 */
-  environment: string;
+  /** 任务执行端类型，用于进入控制台时切换手机端或 PC 端视图。 */
+  environment: DeviceType;
   /** 创建任务的人员名称。 */
   creator: string;
   /** 最近更新时间，直接用于列表展示。 */
   updatedAt: string;
+  /** PC Web 自动化任务的入口地址，用于初始化浏览器和执行请求。 */
+  url: string;
   /** 任务内部执行数据，当前用于保存 PC Web 自动化步骤。 */
   data: PcWebStep[];
 }

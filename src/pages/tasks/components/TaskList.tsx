@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
 import type { TaskListProps, TaskStatus, TaskType } from "@/types/tasks";
+import type { DeviceType } from "@/types/test-control-store";
 import { cn } from "@/lib/utils";
 
 const tabs = [
@@ -43,6 +44,11 @@ const statusLabels: Record<TaskStatus, string> = {
   completed: "已完成",
   failed: "失败",
   paused: "已暂停",
+};
+
+const environmentLabels: Record<DeviceType, string> = {
+  mobile: "手机端",
+  pc: "PC端",
 };
 
 export function TaskList({ activeTab, onTabChange, tasks }: TaskListProps) {
@@ -141,7 +147,7 @@ export function TaskList({ activeTab, onTabChange, tasks }: TaskListProps) {
                   </span>
                 </td>
                 <td className="px-4 text-sm text-[#6B7280]">
-                  {task.environment}
+                  {environmentLabels[task.environment]}
                 </td>
                 <td className="px-4 text-sm text-[#6B7280]">{task.creator}</td>
                 <td className="px-4 text-sm text-[#6B7280]">
@@ -152,7 +158,11 @@ export function TaskList({ activeTab, onTabChange, tasks }: TaskListProps) {
                     <Button
                       size="sm"
                       className="bg-[#2563FF] hover:bg-[#1D4ED8] text-white h-7 px-3"
-                      onClick={() => navigate(`/test-control?id=${task.id}`)}
+                      onClick={() =>
+                        navigate(
+                          `/test-control?id=${task.id}&deviceType=${task.environment}`,
+                        )
+                      }
                     >
                       <Play className="w-3 h-3 mr-1" />
                       执行
