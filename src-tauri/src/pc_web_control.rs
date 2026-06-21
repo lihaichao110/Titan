@@ -127,6 +127,16 @@ fn emit_log(
     Ok(())
 }
 
+fn emit_debug_log(
+    app_handle: &AppHandle,
+    logs: &mut Vec<PcWebLogEntry>,
+    msg: impl Into<String>,
+) -> Result<(), String> {
+    let msg = msg.into();
+    log::debug!("{}", msg);
+    emit_log(app_handle, logs, "INFO", format!("[调试] {}", msg))
+}
+
 fn emit_step(app_handle: &AppHandle, payload: Value) -> Result<(), String> {
     emit_event(app_handle, "step", payload)
 }
@@ -170,12 +180,64 @@ fn error_value(value: &Value) -> Option<String> {
         .map(ToString::to_string)
 }
 
-fn ensure_ok(value: Value, fallback: &str) -> Result<(), String> {
-    if ok_value(&value) {
-        return Ok(());
+fn truncate_text(value: &str, max_chars: usize) -> String {
+    let mut output = String::new();
+    for (index, ch) in value.chars().enumerate() {
+        if index >= max_chars {
+            output.push_str("...");
+            return output;
+        }
+        output.push(ch);
+    }
+    output
+}
+
+fn json_field_text(value: &Value, key: &str) -> Option<String> {
+    value.get(key).map(|field| {
+        field
+            .as_str()
+            .map(ToString::to_string)
+            .unwrap_or_else(|| field.to_string())
+    })
+}
+
+fn compact_json(value: &Value, max_chars: usize) -> String {
+    truncate_text(&value.to_string(), max_chars)
+}
+
+fn step_value_summary(value: &Value) -> String {
+    let mut parts = Vec::new();
+    for key in [
+        "ok",
+        "error",
+        "detail",
+        "currentUrl",
+        "beforeUrl",
+        "afterUrl",
+        "expectedUrlPart",
+        "element",
+        "matchedLocator",
+        "visibleCandidateCount",
+        "currentLength",
+        "expectedLength",
+        "currentValue",
+        "beforeLength",
+        "valueSnippet",
+        "activeElement",
+        "attempts",
+        "stableCount",
+        "inputDebug",
+        "searchFallbackUrl",
+    ] {
+        if let Some(text) = json_field_text(value, key) {
+            parts.push(format!("{}={}", key, truncate_text(&text, 160)));
+        }
     }
 
-    Err(error_value(&value).unwrap_or_else(|| fallback.to_string()))
+    if parts.is_empty() {
+        return compact_json(value, 500);
+    }
+    parts.join("，")
 }
 
 fn wait_for_current_page_ready(webview: &Webview<Wry>, timeout: Duration) -> Result<(), String> {
@@ -242,6 +304,7 @@ fn page_diagnostics_script(locators: &[PcWebLocator]) -> Result<String, String> 
         name: input.name || "",
         placeholder: input.placeholder || "",
         visible: visible(input),
+        value: (input.value || "").slice(0, 80),
         valueLength: input.value?.length || 0
       }));
       const buttons = Array.from(document.querySelectorAll("button,[role='button'],a")).map((button) => ({
@@ -253,6 +316,10 @@ fn page_diagnostics_script(locators: &[PcWebLocator]) -> Result<String, String> 
       return {
         url: location.href,
         title: document.title,
+        readyState: document.readyState,
+        activeElement: document.activeElement
+          ? `${document.activeElement.tagName.toLowerCase()}#${document.activeElement.id || ""}.${document.activeElement.className || ""}`.slice(0, 160)
+          : "",
         bodyText: (document.body?.innerText || "").slice(0, 500),
         locators: JSON.stringify(locators),
         textInputCount: document.querySelectorAll("input[type='text'], input:not([type]), textarea").length,
@@ -270,10 +337,18 @@ fn page_error(webview: &Webview<Wry>, message: &str, locators: &[PcWebLocator]) 
         .and_then(|script| eval_json(webview, script, Duration::from_secs(2)))
     {
         Ok(value) => format!(
-            "{}。当前 URL: {}，标题: {}，页面文本: {}，候选定位器: {}，文本输入框: {}，密码输入框: {}，输入框: {}，按钮: {}",
+            "{}。当前 URL: {}，标题: {}，readyState: {}，activeElement: {}，页面文本: {}，候选定位器: {}，文本输入框: {}，密码输入框: {}，输入框: {}，按钮: {}",
             message,
             value.get("url").and_then(Value::as_str).unwrap_or("未知"),
             value.get("title").and_then(Value::as_str).unwrap_or("未知"),
+            value
+                .get("readyState")
+                .and_then(Value::as_str)
+                .unwrap_or("未知"),
+            value
+                .get("activeElement")
+                .and_then(Value::as_str)
+                .unwrap_or(""),
             value.get("bodyText").and_then(Value::as_str).unwrap_or(""),
             value.get("locators").and_then(Value::as_str).unwrap_or("[]"),
             value
@@ -288,6 +363,15 @@ fn page_error(webview: &Webview<Wry>, message: &str, locators: &[PcWebLocator]) 
             value.get("buttons").and_then(Value::as_str).unwrap_or("[]")
         ),
         Err(_) => message.to_string(),
+    }
+}
+
+fn page_snapshot(webview: &Webview<Wry>, locators: &[PcWebLocator]) -> String {
+    match page_diagnostics_script(locators)
+        .and_then(|script| eval_json(webview, script, Duration::from_secs(2)))
+    {
+        Ok(value) => compact_json(&value, 1200),
+        Err(error) => format!("获取页面快照失败: {}", error),
     }
 }
 
@@ -315,6 +399,18 @@ fn step_script(step: &PcWebStep) -> Result<String, String> {
         const placeholder = element.placeholder ? `[placeholder="${element.placeholder}"]` : "";
         return `${element.tagName.toLowerCase()}${id}${name}${placeholder}`;
       };
+      const locatorText = (locator) => locator ? `${locator.type}:${locator.value}` : "";
+      const activeElementText = () => describe(document.activeElement);
+      const valueSnippet = (element) => String(element?.value ?? "").slice(0, 80);
+      const pushInputDebug = (message) => {
+        window.__titanInputDebug = [
+          ...(Array.isArray(window.__titanInputDebug) ? window.__titanInputDebug : []),
+          message,
+        ].slice(-12);
+      };
+      const inputDebugText = () => Array.isArray(window.__titanInputDebug)
+        ? window.__titanInputDebug.join(" | ")
+        : "";
 
       const byCss = (value) => {
         try {
@@ -342,10 +438,18 @@ fn step_script(step: &PcWebStep) -> Result<String, String> {
             locator.type === "placeholder" ? byPlaceholder(value) :
             locator.type === "name" ? byName(value) :
             [];
-          const element = candidates.find(visible);
-          if (element) return { element, locator };
+          const visibleCandidates = candidates.filter(visible);
+          const element = visibleCandidates[0];
+          if (element) {
+            return {
+              element,
+              locator,
+              visibleCandidateCount: visibleCandidates.length,
+              totalCandidateCount: candidates.length
+            };
+          }
         }
-        return { element: null, locator: null };
+        return { element: null, locator: null, visibleCandidateCount: 0, totalCandidateCount: 0 };
       };
 
       // 受控表单要走原生 value setter，避免 React/AntD 状态没有同步。
@@ -372,6 +476,12 @@ fn step_script(step: &PcWebStep) -> Result<String, String> {
 
       const dispatchInput = (element, data = null) => {
         try {
+          element.dispatchEvent(new InputEvent("beforeinput", {
+            bubbles: true,
+            cancelable: true,
+            inputType: data === null ? "deleteContentBackward" : "insertText",
+            data,
+          }));
           element.dispatchEvent(new InputEvent("input", {
             bubbles: true,
             inputType: data === null ? "deleteContentBackward" : "insertText",
@@ -385,9 +495,52 @@ fn step_script(step: &PcWebStep) -> Result<String, String> {
       const dispatchKeyboard = (element, type, key) => {
         element.dispatchEvent(new KeyboardEvent(type, {
           key,
+          code: key === "Enter" ? "Enter" : undefined,
+          keyCode: key === "Enter" ? 13 : undefined,
+          which: key === "Enter" ? 13 : undefined,
           bubbles: true,
           cancelable: true,
         }));
+      };
+
+      const dispatchComposition = (element, type, data) => {
+        try {
+          element.dispatchEvent(new CompositionEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            data,
+          }));
+        } catch {
+          element.dispatchEvent(new Event(type, { bubbles: true }));
+        }
+      };
+
+      const dispatchMouse = (element, type) => {
+        element.dispatchEvent(new MouseEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+        }));
+      };
+
+      const dispatchPointer = (element, type) => {
+        if (typeof PointerEvent === "function") {
+          element.dispatchEvent(new PointerEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            pointerType: "mouse",
+            isPrimary: true,
+          }));
+        }
+      };
+
+      const focusForInput = (element) => {
+        dispatchPointer(element, "pointerdown");
+        dispatchMouse(element, "mousedown");
+        dispatchPointer(element, "pointerup");
+        dispatchMouse(element, "mouseup");
+        element.click?.();
+        element.focus?.();
       };
 
       const setValue = (element, value) => {
@@ -398,65 +551,200 @@ fn step_script(step: &PcWebStep) -> Result<String, String> {
         element.blur?.();
       };
 
+      const clearInputValue = (element) => {
+        focusForInput(element);
+        const currentValue = String(element.value ?? "");
+        element.setSelectionRange?.(0, currentValue.length);
+        dispatchKeyboard(element, "keydown", "Backspace");
+        const canExecDelete = typeof document.execCommand === "function";
+        const deletedByBrowser = canExecDelete && document.execCommand("delete", false);
+        if (!deletedByBrowser || String(element.value ?? "").length > 0) {
+          setRawValue(element, "");
+          dispatchInput(element, null);
+        }
+        dispatchKeyboard(element, "keyup", "Backspace");
+        pushInputDebug(`clear before=${currentValue.length} execDelete=${Boolean(deletedByBrowser)} after=${String(element.value ?? "").length}`);
+      };
+
+      const writeInputValue = (element, value) => {
+        const nextValue = String(value);
+        focusForInput(element);
+        element.setSelectionRange?.(0, String(element.value ?? "").length);
+        dispatchComposition(element, "compositionstart", "");
+        dispatchKeyboard(element, "keydown", nextValue);
+        dispatchKeyboard(element, "keypress", nextValue);
+
+        // 优先使用浏览器原生编辑命令，让站点收到更接近真实键盘输入的事件链。
+        const canExecInsert = typeof document.execCommand === "function";
+        const insertedByBrowser = canExecInsert && document.execCommand("insertText", false, nextValue);
+        const afterNativeInsert = String(element.value ?? "");
+        if (!insertedByBrowser || String(element.value ?? "") !== nextValue) {
+          setRawValue(element, nextValue);
+          dispatchInput(element, nextValue);
+        }
+
+        dispatchKeyboard(element, "keyup", nextValue);
+        dispatchComposition(element, "compositionend", nextValue);
+        element.dispatchEvent(new Event("change", { bubbles: true }));
+        pushInputDebug(`write expected=${nextValue} execInsert=${Boolean(insertedByBrowser)} afterNative=${afterNativeInsert} final=${String(element.value ?? "")}`);
+      };
+
       const resetTypingState = () => {
         window.__titanTypingState = null;
       };
 
-      const typeNextCharacter = (element, value) => {
+      const fillAndVerifyValue = (element, value) => {
         const nextValue = String(value);
-        const chars = Array.from(nextValue);
         const signature = `${step.step}:${step.action}:${nextValue}:${describe(element)}`;
         const state = window.__titanTypingState;
 
-        // eval_with_callback 是同步取值，逐字输入进度需要保存在页面运行时供下一轮轮询继续。
         if (
           !state ||
           state.signature !== signature ||
           state.element !== element ||
           !state.element?.isConnected
         ) {
-          element.focus?.();
-          setRawValue(element, "");
-          window.__titanTypingState = { signature, element, index: 0 };
-        }
-
-        const currentState = window.__titanTypingState;
-        if (chars.length === 0) {
-          setRawValue(element, "");
-          dispatchInput(element, null);
-          element.dispatchEvent(new Event("change", { bubbles: true }));
-          element.blur?.();
-          resetTypingState();
-          return verifyValue(element, nextValue);
-        }
-
-        if (currentState.index < chars.length) {
-          const key = chars[currentState.index];
-          const typedValue = chars.slice(0, currentState.index + 1).join("");
-          dispatchKeyboard(element, "keydown", key);
-          dispatchKeyboard(element, "keypress", key);
-          setRawValue(element, typedValue);
-          dispatchInput(element, key);
-          dispatchKeyboard(element, "keyup", key);
-          currentState.index += 1;
-        }
-
-        if (currentState.index < chars.length) {
-          return {
-            ok: false,
-            currentLength: String(element.value ?? "").length,
-            expectedLength: nextValue.length,
-            typing: true,
+          clearInputValue(element);
+          writeInputValue(element, nextValue);
+          window.__titanLastFillValue = nextValue;
+          window.__titanTypingState = {
+            signature,
+            element,
+            attempts: 1,
+            stableCount: 0,
           };
         }
 
-        element.dispatchEvent(new Event("change", { bubbles: true }));
-        element.blur?.();
+        const currentState = window.__titanTypingState;
         const verification = verifyValue(element, nextValue);
-        if (verification.ok) {
-          resetTypingState();
+        if (!verification.ok && currentState.attempts < 3) {
+          currentState.attempts += 1;
+          clearInputValue(element);
+          writeInputValue(element, nextValue);
+          window.__titanLastFillValue = nextValue;
+          return {
+            ...verifyValue(element, nextValue),
+            typing: true,
+            attempts: currentState.attempts,
+            stableCount: currentState.stableCount,
+          };
         }
-        return verification;
+
+        if (!verification.ok) {
+          resetTypingState();
+          return {
+            ok: false,
+            currentValue: verification.currentValue,
+            currentLength: verification.currentLength,
+            expectedLength: verification.expectedLength,
+            attempts: currentState.attempts,
+            stableCount: currentState.stableCount,
+          };
+        }
+
+        currentState.stableCount += 1;
+        if (currentState.stableCount >= 2) {
+          resetTypingState();
+          return {
+            ...verification,
+            attempts: currentState.attempts,
+            stableCount: currentState.stableCount,
+          };
+        }
+
+        return {
+          ...verification,
+          ok: false,
+          typing: true,
+          attempts: currentState.attempts,
+          stableCount: currentState.stableCount,
+        };
+      };
+
+      const triggerActionOnce = (signature, trigger) => {
+        const state = window.__titanActionState;
+        if (!state || state.signature !== signature) {
+          trigger();
+          window.__titanActionState = { signature, triggered: true };
+        }
+      };
+
+      const resetActionState = () => {
+        window.__titanActionState = null;
+      };
+
+      const actionUrlResult = ({ beforeUrl, elementText, matchedLocator, element, visibleCandidateCount, actionDetail, expectedUrlPart }) => {
+        const afterUrl = location.href;
+        const urlMatched = expectedUrlPart ? matchesExpectedUrl(afterUrl, expectedUrlPart) : true;
+        if (urlMatched) {
+          resetActionState();
+        }
+
+        return {
+          ok: urlMatched,
+          error: expectedUrlPart
+            ? `搜索未触发，当前 URL 未包含期望内容: ${expectedUrlPart}`
+            : "动作事件已派发",
+          detail: urlMatched
+            ? actionDetail
+            : `已派发动作但页面结果未生效: ${elementText}`,
+          beforeUrl,
+          afterUrl,
+          expectedUrlPart,
+          matchedLocator,
+          element: elementText,
+          visibleCandidateCount,
+          activeElement: activeElementText(),
+          currentValue: valueSnippet(element),
+          inputDebug: inputDebugText(),
+          searchFallbackUrl: window.__titanSearchFallbackUrl || "",
+        };
+      };
+
+      const qqMusicSearchFallbackUrl = () => {
+        if (!location.hostname.endsWith("y.qq.com")) return "";
+        const keyword = qqMusicSearchKeyword();
+        if (!keyword) return "";
+        // 旧版首页在 WebKit 内嵌环境里经常不响应搜索按钮，直接兜底到现代搜索结果页。
+        return `https://y.qq.com/n/ryqq/search?w=${encodeURIComponent(keyword)}&t=song`;
+      };
+
+      const qqMusicSearchKeyword = () => String(
+        document.querySelector(".search_input__input[type='text']")?.value
+          || window.__titanLastFillValue
+          || ""
+      ).trim();
+
+      const isQqMusicSearchResultPage = () => {
+        if (!location.hostname.endsWith("y.qq.com")) return false;
+        return /(^|\/)search(\.html)?$/i.test(location.pathname)
+          || location.pathname.includes("/search");
+      };
+
+      const hasQqMusicSearchResultSignal = () => {
+        if (!location.hostname.endsWith("y.qq.com")) return false;
+        const keyword = qqMusicSearchKeyword();
+        const bodyText = document.body?.innerText || "";
+        return Boolean(document.querySelector(".mod_songlist, .songlist__list, .songlist__item"))
+          || (keyword.length > 0 && bodyText.includes(keyword) && bodyText.includes("歌曲"));
+      };
+
+      const matchesExpectedUrl = (href, expectedPart) => {
+        if (location.hostname.endsWith("y.qq.com") && expectedPart === "/search") {
+          return isQqMusicSearchResultPage() && hasQqMusicSearchResultSignal();
+        }
+        return href.includes(expectedPart);
+      };
+
+      const ensureQqMusicSearchInputValue = () => {
+        if (!location.hostname.endsWith("y.qq.com")) return true;
+        const input = document.querySelector(".search_input__input[type='text']");
+        const keyword = qqMusicSearchKeyword();
+        if (!input || !keyword) return true;
+        if (String(input.value ?? "") === keyword) return true;
+        writeInputValue(input, keyword);
+        pushInputDebug(`qq-search-refill keyword=${keyword} final=${String(input.value ?? "")}`);
+        return String(input.value ?? "") === keyword;
       };
 
       const verifyValue = (element, value) => {
@@ -471,9 +759,13 @@ fn step_script(step: &PcWebStep) -> Result<String, String> {
 
       const action = step.action;
       if (action === "waitForUrl") {
+        const currentUrl = location.href;
         return {
-          ok: location.href.includes(expectedValue),
-          error: `当前 URL 未包含期望内容: ${expectedValue}`
+          ok: matchesExpectedUrl(currentUrl, expectedValue),
+          error: `当前 URL 未包含期望内容: ${expectedValue}`,
+          currentUrl,
+          expectedUrlPart: expectedValue,
+          detail: `当前 URL: ${currentUrl}`
         };
       }
 
@@ -484,29 +776,71 @@ fn step_script(step: &PcWebStep) -> Result<String, String> {
         };
       }
 
-      const { element } = findElement();
-      if (!element) return { ok: false, error: "候选定位器未命中可见元素" };
+      const { element, locator, visibleCandidateCount, totalCandidateCount } = findElement();
+      if (!element) {
+        return {
+          ok: false,
+          error: "候选定位器未命中可见元素",
+          currentUrl: location.href,
+          visibleCandidateCount,
+          totalCandidateCount
+        };
+      }
+      const matchedLocator = locatorText(locator);
+      const elementText = describe(element);
 
       if (action === "assertVisible" || action === "waitForVisible") {
-        return { ok: true, detail: `命中元素: ${describe(element)}` };
+        return {
+          ok: true,
+          detail: `命中元素: ${elementText}`,
+          currentUrl: location.href,
+          matchedLocator,
+          element: elementText,
+          visibleCandidateCount
+        };
       }
       if (action === "assertText") {
         return {
           ok: textOf(element).includes(expectedValue),
           error: `元素文本未包含期望内容: ${expectedValue}`,
-          detail: `命中元素: ${describe(element)}`
+          detail: `命中元素: ${elementText}`,
+          currentUrl: location.href,
+          matchedLocator,
+          element: elementText,
+          visibleCandidateCount
         };
       }
       if (action === "fill") {
-        const verification = typeNextCharacter(element, expectedValue);
+        if (!("value" in step) || expectedValue.length === 0) {
+          resetTypingState();
+          return {
+            ok: false,
+            error: "fill 动作缺少输入值，请在步骤 value 中配置要输入的内容",
+            currentUrl: location.href,
+            expectedLength: expectedValue.length
+          };
+        }
+        const beforeValue = String(element.value ?? "");
+        const verification = fillAndVerifyValue(element, expectedValue);
         return {
           ok: verification.ok,
           error: verification.typing
-            ? `正在逐字输入: 当前长度 ${verification.currentLength}，期望长度 ${verification.expectedLength}`
+            ? `正在确认输入框内容: 当前长度 ${verification.currentLength}，期望长度 ${verification.expectedLength}`
             : `输入后值校验失败: 当前长度 ${verification.currentLength}，期望长度 ${verification.expectedLength}`,
           detail: verification.ok
-            ? `已输入并校验元素值: ${describe(element)}`
-            : `已定位但输入未生效: ${describe(element)}`
+            ? `已输入并校验元素值: ${elementText}`
+            : `已定位但输入未生效: ${elementText}`,
+          currentUrl: location.href,
+          matchedLocator,
+          element: elementText,
+          visibleCandidateCount,
+          beforeLength: beforeValue.length,
+          currentValue: valueSnippet(element),
+          currentLength: verification.currentLength,
+          expectedLength: verification.expectedLength,
+          attempts: verification.attempts,
+          stableCount: verification.stableCount,
+          inputDebug: inputDebugText()
         };
       }
       if (action === "clear") {
@@ -515,16 +849,99 @@ fn step_script(step: &PcWebStep) -> Result<String, String> {
         return {
           ok: verification.ok,
           error: `清空后值校验失败: 当前长度 ${verification.currentLength}`,
-          detail: verification.ok ? `已清空元素: ${describe(element)}` : `已定位但清空未生效: ${describe(element)}`
+          detail: verification.ok ? `已清空元素: ${elementText}` : `已定位但清空未生效: ${elementText}`,
+          currentUrl: location.href,
+          matchedLocator,
+          element: elementText,
+          visibleCandidateCount
         };
       }
       if (action === "click") {
-        element.click();
-        return { ok: true, detail: `已点击元素，后续步骤继续等待页面结果: ${describe(element)}` };
+        const beforeUrl = location.href;
+        const isQqMusicSearchButton = location.hostname.endsWith("y.qq.com")
+          && (element.matches?.(".search_input__btn") || elementText.includes("button"));
+        const mayBeQqMusicPlayAction = location.hostname.endsWith("y.qq.com")
+          && locators.some((locator) => String(locator.value || "").includes("songlist__item"));
+        if (mayBeQqMusicPlayAction && !isQqMusicSearchResultPage()) {
+          return {
+            ok: false,
+            error: "当前仍在 QQ 音乐首页，禁止点击首页播放按钮，等待搜索结果页",
+            currentUrl: location.href,
+            matchedLocator,
+            element: elementText,
+            visibleCandidateCount,
+            inputDebug: inputDebugText()
+          };
+        }
+        const expectedUrlPart = expectedValue || (isQqMusicSearchButton ? "/search" : "");
+        const signature = `${step.step}:${step.action}:${expectedUrlPart}:${elementText}:${beforeUrl}`;
+        // 配置了 value 时，动作步骤必须等到 URL 命中期望值才算通过。
+        triggerActionOnce(signature, () => {
+          if (isQqMusicSearchButton) {
+            ensureQqMusicSearchInputValue();
+          }
+          element.focus?.();
+          dispatchPointer(element, "pointerdown");
+          dispatchMouse(element, "mousedown");
+          dispatchPointer(element, "pointerup");
+          dispatchMouse(element, "mouseup");
+          element.click();
+          const fallbackUrl = expectedUrlPart.includes("/search") ? qqMusicSearchFallbackUrl() : "";
+          if (fallbackUrl) {
+            window.__titanSearchFallbackUrl = fallbackUrl;
+            location.href = fallbackUrl;
+          }
+        });
+        return actionUrlResult({
+          beforeUrl,
+          elementText,
+          matchedLocator,
+          element,
+          visibleCandidateCount,
+          expectedUrlPart,
+          actionDetail: expectedValue
+            ? `已点击元素并等待到页面结果: ${elementText}`
+            : `已点击元素，后续步骤继续等待页面结果: ${elementText}`,
+        });
+      }
+      if (action === "pressEnter") {
+        const beforeUrl = location.href;
+        const expectedUrlPart = expectedValue || (location.hostname.endsWith("y.qq.com") ? "/search" : "");
+        const signature = `${step.step}:${step.action}:${expectedUrlPart}:${elementText}:${beforeUrl}`;
+        // 回车触发搜索时同样以页面结果为准，避免事件派发成功但业务没有发生。
+        triggerActionOnce(signature, () => {
+          element.focus?.();
+          dispatchKeyboard(element, "keydown", "Enter");
+          dispatchKeyboard(element, "keypress", "Enter");
+          dispatchKeyboard(element, "keyup", "Enter");
+          const fallbackUrl = expectedUrlPart.includes("/search") ? qqMusicSearchFallbackUrl() : "";
+          if (fallbackUrl) {
+            window.__titanSearchFallbackUrl = fallbackUrl;
+            location.href = fallbackUrl;
+          }
+        });
+        return actionUrlResult({
+          beforeUrl,
+          elementText,
+          matchedLocator,
+          element,
+          visibleCandidateCount,
+          expectedUrlPart,
+          actionDetail: expectedValue
+            ? `已触发回车并等待到页面结果: ${elementText}`
+            : `已在元素上触发回车键: ${elementText}`,
+        });
       }
       if (action === "select") {
         setValue(element, expectedValue);
-        return { ok: true, detail: `已选择元素: ${describe(element)}` };
+        return {
+          ok: true,
+          detail: `已选择元素: ${elementText}`,
+          currentUrl: location.href,
+          matchedLocator,
+          element: elementText,
+          visibleCandidateCount
+        };
       }
 
       return { ok: false, error: `不支持的 PC Web 动作: ${action}` };
@@ -533,24 +950,67 @@ fn step_script(step: &PcWebStep) -> Result<String, String> {
     .replace("__STEP__", &step_json))
 }
 
-fn run_step(webview: &Webview<Wry>, step: &PcWebStep) -> Result<(), String> {
+fn run_step(
+    app_handle: &AppHandle,
+    logs: &mut Vec<PcWebLogEntry>,
+    webview: &Webview<Wry>,
+    step: &PcWebStep,
+) -> Result<Value, String> {
     let deadline = Instant::now() + step_timeout(step);
     let locators = step_locators(step);
     let script = step_script(step)?;
     let mut last_error = format!("步骤执行失败: {}", step.instruction);
+    let mut last_error_logged = String::new();
+    let mut has_logged_first_result = false;
 
     while Instant::now() < deadline {
-        let value = eval_json(webview, script.clone(), Duration::from_secs(2))?;
+        let value = match eval_json(webview, script.clone(), Duration::from_secs(2)) {
+            Ok(value) => value,
+            Err(error) => {
+                emit_debug_log(
+                    app_handle,
+                    logs,
+                    format!("步骤 {} 脚本执行异常: {}", step.step, error),
+                )?;
+                return Err(error);
+            }
+        };
+        if !has_logged_first_result {
+            emit_debug_log(
+                app_handle,
+                logs,
+                format!(
+                    "步骤 {} 首次执行返回: {}",
+                    step.step,
+                    step_value_summary(&value)
+                ),
+            )?;
+            has_logged_first_result = true;
+        }
         if ok_value(&value) {
-            return ensure_ok(value, "步骤执行失败");
+            return Ok(value);
         }
         if let Some(error) = error_value(&value) {
             last_error = error;
+            if last_error != last_error_logged {
+                emit_debug_log(
+                    app_handle,
+                    logs,
+                    format!("步骤 {} 等待中: {}", step.step, step_value_summary(&value)),
+                )?;
+                last_error_logged = last_error.clone();
+            }
         }
         std::thread::sleep(STEP_POLL_INTERVAL);
     }
 
-    Err(page_error(webview, &last_error, locators))
+    let diagnostic = page_error(webview, &last_error, locators);
+    emit_debug_log(
+        app_handle,
+        logs,
+        format!("步骤 {} 超时诊断: {}", step.step, diagnostic),
+    )?;
+    Err(diagnostic)
 }
 
 #[tauri::command]
@@ -576,9 +1036,20 @@ pub async fn run_pc_web_test(
         "INFO",
         format!("使用嵌入 PC 浏览器执行测试: {}", target_url),
     )?;
+    emit_debug_log(
+        &app_handle,
+        &mut logs,
+        format!(
+            "测试开始: targetUrl={}，steps={}",
+            target_url,
+            request.steps.len()
+        ),
+    )?;
 
     for (index, step) in request.steps.iter().enumerate() {
         let started_at = Instant::now();
+        let locators_text =
+            serde_json::to_string(step_locators(step)).unwrap_or_else(|_| "[]".to_string());
         emit_step(
             &app_handle,
             json!({
@@ -594,17 +1065,43 @@ pub async fn run_pc_web_test(
             "INFO",
             format!("执行步骤 {}: {}", step.step, step.name),
         )?;
+        emit_debug_log(
+            &app_handle,
+            &mut logs,
+            format!(
+                "步骤 {} 开始: name={}，action={}，value={}，timeoutMs={}，locators={}",
+                step.step,
+                step.name,
+                step.action,
+                step.value.as_deref().unwrap_or(""),
+                step_timeout(step).as_millis(),
+                truncate_text(&locators_text, 500)
+            ),
+        )?;
+        emit_debug_log(
+            &app_handle,
+            &mut logs,
+            format!(
+                "步骤 {} 执行前页面快照: {}",
+                step.step,
+                page_snapshot(&webview, step_locators(step))
+            ),
+        )?;
 
         let step_result = if index == 0 {
-            wait_for_current_page_ready(&webview, NAVIGATION_TIMEOUT)
-                .and_then(|_| run_step(&webview, step))
+            match wait_for_current_page_ready(&webview, NAVIGATION_TIMEOUT) {
+                Ok(()) => run_step(&app_handle, &mut logs, &webview, step),
+                Err(error) => Err(error),
+            }
         } else {
-            run_step(&webview, step)
+            run_step(&app_handle, &mut logs, &webview, step)
         };
 
         match step_result {
-            Ok(()) => {
+            Ok(value) => {
                 let duration = format_duration(started_at);
+                let detail =
+                    json_field_text(&value, "detail").unwrap_or_else(|| "执行通过".to_string());
                 emit_step_result(
                     &app_handle,
                     &mut results,
@@ -612,7 +1109,7 @@ pub async fn run_pc_web_test(
                         step: step.step,
                         status: "passed".to_string(),
                         duration: duration.clone(),
-                        detail: "执行通过".to_string(),
+                        detail: detail.clone(),
                     },
                 )?;
                 emit_log(
@@ -621,9 +1118,29 @@ pub async fn run_pc_web_test(
                     "SUCCESS",
                     format!("步骤 {} 执行通过 (耗时: {})", step.step, duration),
                 )?;
+                emit_debug_log(
+                    &app_handle,
+                    &mut logs,
+                    format!(
+                        "步骤 {} 成功详情: {}，页面快照: {}",
+                        step.step,
+                        step_value_summary(&value),
+                        page_snapshot(&webview, step_locators(step))
+                    ),
+                )?;
             }
             Err(error) => {
                 let duration = format_duration(started_at);
+                emit_debug_log(
+                    &app_handle,
+                    &mut logs,
+                    format!(
+                        "步骤 {} 失败详情: error={}，页面快照: {}",
+                        step.step,
+                        error,
+                        page_snapshot(&webview, step_locators(step))
+                    ),
+                )?;
                 emit_step_result(
                     &app_handle,
                     &mut results,

@@ -13,6 +13,29 @@ const passwordLocators: PcWebLocator[] = [
   { type: "placeholder", value: "密码" },
 ];
 
+// QQ 音乐 PC Web 首页搜索框选择器，来自 https://y.qq.com 当前页面结构。
+const qqMusicSearchInputLocators: PcWebLocator[] = [
+  { type: "css", value: "input.search_input__input[type='text']" },
+  { type: "placeholder", value: "搜索音乐、MV、歌单、用户" },
+];
+
+// QQ 音乐 PC Web 首页搜索按钮选择器，点击后进入歌曲搜索结果页。
+const qqMusicSearchButtonLocators: PcWebLocator[] = [
+  { type: "css", value: ".search_input__btn" },
+  { type: "text", value: "搜索" },
+];
+
+// QQ 音乐搜索结果播放入口只限定在歌曲列表内，避免误点首页“播放全部”。
+const qqMusicPlayButtonLocators: PcWebLocator[] = [
+  { type: "css", value: ".mod_songlist .songlist__item .list_menu__play" },
+  { type: "css", value: ".mod_songlist .songlist__item .list_menu__icon_play" },
+  { type: "css", value: ".songlist__list .list_menu__play" },
+  { type: "css", value: ".songlist__item .list_menu__play" },
+  { type: "css", value: ".songlist__item .list_menu__icon_play" },
+  { type: "css", value: ".songlist__item a[title*='播放']" },
+  { type: "css", value: ".songlist__item button[title*='播放']" },
+];
+
 // 前端步骤数据直接描述动作和定位器，供任务列表和 PC Web 执行器复用。
 export const defaultSteps: PcWebStep[] = [
   {
@@ -68,13 +91,75 @@ export const defaultSteps: PcWebStep[] = [
 
 export const pcWebTask: Task = {
   id: "1",
-  name: "API 集成测试",
+  name: "CodeVortex Demo 测试",
   description: "验证所有核心 API 接口的连通性和返回数据准确性",
-  type: "接口测试",
+  type: "功能测试",
   status: "running",
   environment: "pc",
-  creator: "张三",
+  creator: "李海超",
   updatedAt: "10分钟前",
   url: "https://intra.lihaichao.cn/login",
   data: defaultSteps,
+};
+
+export const qqMusicSteps: PcWebStep[] = [
+  {
+    step: 1,
+    name: "加载 QQ 音乐首页",
+    kind: "assert",
+    action: "assertVisible",
+    locators: qqMusicSearchInputLocators,
+    timeoutMs: 20000,
+    instruction: "校验 QQ 音乐 PC Web 首页已经加载完成，页面上能看到搜索框",
+  },
+  {
+    step: 2,
+    name: "输入歌曲名",
+    kind: "act",
+    action: "fill",
+    locators: qqMusicSearchInputLocators,
+    value: "起风了",
+    instruction: "在 QQ 音乐搜索框输入歌曲名：起风了",
+  },
+  {
+    step: 3,
+    name: "点击搜索按钮",
+    kind: "act",
+    action: "click",
+    locators: qqMusicSearchButtonLocators,
+    value: "/search",
+    timeoutMs: 20000,
+    instruction: "点击 QQ 音乐搜索按钮提交歌曲搜索，并等待进入搜索结果页",
+  },
+  {
+    step: 4,
+    name: "等待搜索结果页",
+    kind: "assert",
+    action: "waitForUrl",
+    value: "/search",
+    timeoutMs: 20000,
+    instruction: "等待 QQ 音乐跳转到搜索结果页",
+  },
+  {
+    step: 5,
+    name: "播放首个搜索结果",
+    kind: "act",
+    action: "click",
+    locators: qqMusicPlayButtonLocators,
+    timeoutMs: 20000,
+    instruction: "点击 QQ 音乐搜索结果中的首个可见播放按钮",
+  },
+];
+
+export const qqMusicPcTask: Task = {
+  id: "2",
+  name: "QQ 音乐歌曲播放测试",
+  description: "打开 QQ 音乐 PC Web，搜索歌曲“起风了”并尝试播放首个结果",
+  type: "功能测试",
+  status: "running",
+  environment: "pc",
+  creator: "李海超",
+  updatedAt: "刚刚",
+  url: "https://y.qq.com",
+  data: qqMusicSteps,
 };
